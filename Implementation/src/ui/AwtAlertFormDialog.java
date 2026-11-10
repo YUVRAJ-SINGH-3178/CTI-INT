@@ -1,16 +1,17 @@
 package ui;
 
-import java.util.Locale;
-
 import model.Alert;
 import model.CanAlert;
 import model.V2xAlert;
 import service.Team6_AlertManagement;
+import service.Team6_RiskRanking;
 import util.ValidationException;
 
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.util.Collections;
+import java.util.Locale;
 
 /**
  * Java AWT Modal Dialog for creating and editing security alerts.
@@ -18,6 +19,7 @@ import java.awt.event.WindowEvent;
 public class AwtAlertFormDialog extends Dialog {
 
     private final Team6_AlertManagement alertService;
+    private final Team6_RiskRanking riskRankingService;
     private final Alert existingAlert;
     private boolean saved = false;
 
@@ -26,27 +28,28 @@ public class AwtAlertFormDialog extends Dialog {
     private final TextField txtConfidence = new TextField("0.90", 10);
     private final Choice cmbTechnique = new Choice();
     private final Choice cmbSeverity = new Choice();
-    private final TextField txtTargetAssets = new TextField("['Electronic Brake Control Module (EBCM)']", 25);
+    private final TextField txtTargetAssets = new TextField("['Braking_ECU']", 25);
     private final Choice cmbStatus = new Choice();
     private final Label lblError = new Label("");
 
-    public AwtAlertFormDialog(Frame parent, String title, Alert existingAlert, Team6_AlertManagement alertService) {
+    public AwtAlertFormDialog(Frame parent, String title, Alert existingAlert,
+                              Team6_AlertManagement alertService,
+                              Team6_RiskRanking riskRankingService) {
         super(parent, title, true);
         this.alertService = alertService;
+        this.riskRankingService = riskRankingService;
         this.existingAlert = existingAlert;
 
         setLayout(new BorderLayout(10, 10));
         setBackground(new Color(241, 245, 249));
-        setSize(520, 420);
+        setSize(540, 430);
         setLocationRelativeTo(parent);
 
-        // Header
         Label lblTitle = new Label(title);
         lblTitle.setFont(new Font("SansSerif", Font.BOLD, 14));
         lblTitle.setAlignment(Label.CENTER);
         add(lblTitle, BorderLayout.NORTH);
 
-        // Form Fields (GridBagLayout)
         Panel formPanel = new Panel(new GridBagLayout());
         formPanel.setBackground(Color.WHITE);
         GridBagConstraints gbc = new GridBagConstraints();
@@ -58,10 +61,11 @@ public class AwtAlertFormDialog extends Dialog {
         cmbDomain.add("V2X");
 
         cmbTechnique.add("T0814 - Denial of Service");
-        cmbTechnique.add("T0855 - Unauthorized Command");
+        cmbTechnique.add("T0855 - Unauthorized Command Message");
         cmbTechnique.add("T0856 - Spoof Reporting Message");
         cmbTechnique.add("T0831 - Manipulation of Control");
         cmbTechnique.add("T1498 - Network Denial of Service");
+        cmbTechnique.add("T1565.002 - Transmitted Data Manipulation");
 
         cmbSeverity.add("CRITICAL");
         cmbSeverity.add("HIGH");
@@ -84,7 +88,6 @@ public class AwtAlertFormDialog extends Dialog {
 
         add(formPanel, BorderLayout.CENTER);
 
-        // Bottom Controls
         Panel bottomPanel = new Panel(new BorderLayout());
         bottomPanel.setBackground(new Color(241, 245, 249));
 
@@ -108,11 +111,11 @@ public class AwtAlertFormDialog extends Dialog {
         bottomPanel.add(btnPanel, BorderLayout.SOUTH);
         add(bottomPanel, BorderLayout.SOUTH);
 
-        // Populate fields if editing
         if (existingAlert != null) {
             cmbDomain.select(existingAlert.getDomain());
             txtAttackType.setText(existingAlert.getAttackType());
             txtConfidence.setText(String.format(Locale.US, "%.4f", existingAlert.getConfidence()));
+            selectTechnique(existingAlert.getMitreTechnique());
             cmbSeverity.select(existingAlert.getSeverity());
             txtTargetAssets.setText(existingAlert.getTargetAssets());
             cmbStatus.select(existingAlert.getStatus());
@@ -126,6 +129,16 @@ public class AwtAlertFormDialog extends Dialog {
                 dispose();
             }
         });
+    }
+
+    private void selectTechnique(String mitreId) {
+        if (mitreId == null) return;
+        for (int i = 0; i < cmbTechnique.getItemCount(); i++) {
+            if (cmbTechnique.getItem(i).startsWith(mitreId.trim())) {
+                cmbTechnique.select(i);
+                return;
+            }
+        }
     }
 
     private void addField(Panel p, GridBagConstraints gbc, int row, String label, Component comp) {
@@ -153,34 +166,54 @@ public class AwtAlertFormDialog extends Dialog {
             } catch (NumberFormatException e) {
                 throw new ValidationException("confidence", "Confidence must be a valid number.");
             }
-            if (conf < 0.0 || conf > 1.0) throw new ValidationException("confidence", "Confidence must be between 0.0 and 1.0.");
+            if (conf < 0.0 || conf > 1.0) {
+                throw new ValidationException("confidence", "Confidence must be between 0.0 and 1.0.");
+            }
 
-            String tech = cmbTechnique.getSelectedItem().split(" - ")[0];
-            String techName = cmbTechnique.getSelectedItem().split(" - ")[1];
+            String[] techParts = cmbTechnique.getSelectedItem().split(" - ", 2);
+            String tech = techParts[0];
+            String techName = techParts.length > 1 ? techParts[1] : "Unknown Technique";
             String sev = cmbSeverity.getSelectedItem();
             String assets = txtTargetAssets.getText().trim();
             String status = cmbStatus.getSelectedItem();
 
+            String cwe = "CWE-345";
+            if (attack.toUpperCase().contains("DOS")) cwe = "CWE-400";
+            else if (attack.toUpperCase().contains("GAS") || attack.toUpperCase().contains("STEERING")) cwe = "CWE-306";
+            else if (attack.toUpperCase().contains("RANDOM_POS")) cwe = "CWE-399";
+
             if (existingAlert == null) {
                 Alert newAlert;
                 if ("CAN".equalsIgnoreCase(domain)) {
-                    newAlert = new CanAlert(0, 9999, attack, conf, 0.0, tech, techName, sev, assets, "CWE-400",
-                            java.time.LocalDateTime.now().toString(), status, 0x128, "00 00 00 00", 8);
+                    int canId = attack.toUpperCase().contains("DOS") ? 291 : 513;
+                    newAlert = new CanAlert(0, 0, attack, conf, 0.0, tech, techName, sev, assets, cwe,
+                            java.time.LocalDateTime.now().toString(), status, canId, "", 8);
                 } else {
-                    newAlert = new V2xAlert(0, 9999, attack, conf, 0.0, tech, techName, sev, assets, "CWE-345",
-                            java.time.LocalDateTime.now().toString(), status, 10, 99, 100.0, 100.0, 25.0);
+                    newAlert = new V2xAlert(0, 0, attack, conf, 0.0, tech, techName, sev, assets, cwe,
+                            java.time.LocalDateTime.now().toString(), status, 0, 0, 0.0, 0.0, 0.0);
                 }
-                newAlert.calculateHeuristicRisk(3.5, 3.5);
+                if (riskRankingService != null) {
+                    riskRankingService.recalculateHeuristicRiskScores(Collections.singletonList(newAlert));
+                } else {
+                    newAlert.calculateHeuristicRisk(3.5, 3.5);
+                }
+                newAlert.setSeverity(sev);
                 alertService.ap25110090004_AlertManagement_create(newAlert);
             } else {
                 existingAlert.setDomain(domain);
                 existingAlert.setAttackType(attack);
                 existingAlert.setConfidence(conf);
                 existingAlert.setMitreTechnique(tech);
+                existingAlert.setTechniqueName(techName);
                 existingAlert.setSeverity(sev);
                 existingAlert.setTargetAssets(assets);
                 existingAlert.setStatus(status);
-                existingAlert.calculateHeuristicRisk(3.5, 3.5);
+                if (riskRankingService != null) {
+                    riskRankingService.recalculateHeuristicRiskScores(Collections.singletonList(existingAlert));
+                } else {
+                    existingAlert.calculateHeuristicRisk(3.5, 3.5);
+                }
+                existingAlert.setSeverity(sev);
                 alertService.ap25110090004_AlertManagement_update(existingAlert);
             }
 

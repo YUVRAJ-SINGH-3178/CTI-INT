@@ -58,6 +58,24 @@ public class TestRunner {
         Team6_RiskRanking riskRankingService = new Team6_RiskRanking();
         Team6_UserReports userReportsService = new Team6_UserReports();
 
+        // Pre-mutation check for TC-19: Full CSV Database Seeding (7,683 rows)
+        TestCaseResult tc19Result;
+        try {
+            List<Alert> seededAlerts = alertService.getAllAlerts();
+            long canCount = seededAlerts.stream().filter(a -> "CAN".equals(a.getDomain())).count();
+            long v2xCount = seededAlerts.stream().filter(a -> "V2X".equals(a.getDomain())).count();
+            Optional<Alert> firstOpt = alertService.ap25110090004_AlertManagement_retrive(1);
+            boolean firstOk = firstOpt.isPresent() && "RPM".equals(firstOpt.get().getAttackType())
+                    && Math.abs(firstOpt.get().getRiskScore() - 6.18) < 0.01;
+            boolean pass = (seededAlerts.size() == 7683) && (canCount == 7499) && (v2xCount == 184) && firstOk;
+            tc19Result = new TestCaseResult("TC-19", "Full dataset database seeding verification (7,683 alerts)",
+                    "Seeds 7,683 alerts (7,499 CAN + 184 V2X); Row 1=RPM (risk=6.18)",
+                    "Total=" + seededAlerts.size() + " (CAN=" + canCount + ", V2X=" + v2xCount + "), Row1=" +
+                    (firstOpt.isPresent() ? firstOpt.get().getAttackType() + "@" + firstOpt.get().getRiskScore() : "None"), pass);
+        } catch (Exception e) {
+            tc19Result = new TestCaseResult("TC-19", "Full dataset seeding verification", "7,683 alerts", "Exception: " + e.getMessage(), false);
+        }
+
         // TC-01: Valid CanAlert Create
         try {
             CanAlert canAlert = new CanAlert(0, 501, "DoS_Injection", 0.95, 0.0,
@@ -299,7 +317,78 @@ public class TestRunner {
             results.add(new TestCaseResult("TC-18", "Heuristic risk & polymorphic details", "Risk 18.00 & distinct details", "Exception: " + e.getMessage(), false));
         }
 
-        // Cleanup test database
+        // TC-19: Recorded Full Seeding Check
+        results.add(tc19Result);
+
+        // TC-20: Real MITRE ATT&CK STIX 2.1 Bundle Parsing
+        try {
+            Map<String, StixAttackLoader.StixTechnique> stix = StixAttackLoader.getCatalog();
+            String[] reqIds = {"T0814", "T0855", "T0856", "T0831", "T1498", "T1565.002"};
+            boolean allPresent = true;
+            for (String id : reqIds) {
+                if (!stix.containsKey(id)) {
+                    allPresent = false;
+                    break;
+                }
+            }
+            boolean pass = stix.size() > 500 && allPresent;
+            results.add(new TestCaseResult("TC-20", "MITRE attack-stix-data STIX 2.1 JSON extraction",
+                    "Extracts ICS + Enterprise ATT&CK techniques including all 6 mapped IDs",
+                    "Loaded " + stix.size() + " unique STIX techniques (ICS=" + StixAttackLoader.getIcsTechniqueCount() +
+                    ", Enterprise=" + StixAttackLoader.getEnterpriseTechniqueCount() + ", all 6 verified)", pass));
+        } catch (Exception e) {
+            results.add(new TestCaseResult("TC-20", "STIX 2.1 extraction", "All 6 IDs", "Exception: " + e.getMessage(), false));
+        }
+
+        // TC-21: Full CICIoV2024 Raw Dataset Scan (All 6 Files / 1,408,219 Frames) + Batch Ingest
+        try {
+            List<FullDatasetScanner.CanStreamSummary> canStats = FullDatasetScanner.scanAllCiciov2024Files();
+            long totalCanFrames = canStats.stream().mapToLong(s -> s.frameCount).sum();
+            File dosFile = new File(FullDatasetScanner.resolveDir("CICIoV2024"), "decimal_DoS.csv");
+            int ingestedDos = telemetryService.ingestCsvAsync(dosFile, "CAN", 200, null).get();
+            boolean pass = (canStats.size() == 6) && (totalCanFrames == 1408219L) && (ingestedDos == 200);
+            results.add(new TestCaseResult("TC-21", "Full CICIoV2024 6-CSV scan (1,408,219 frames) & async ingest",
+                    "Scans 6 files totaling 1,408,219 frames and ingests 200 DoS CAN frames",
+                    "Files=" + canStats.size() + ", TotalFrames=" + totalCanFrames + ", IngestedDoS=" + ingestedDos, pass));
+        } catch (Exception e) {
+            results.add(new TestCaseResult("TC-21", "Full CICIoV2024 scan & ingest", "1,408,219 frames", "Exception: " + e.getMessage(), false));
+        }
+
+        // TC-22: Full VeReMi Index (225 runs) + Live .tgz BSM Extraction
+        try {
+            List<FullDatasetScanner.VeremiRunEntry> index = FullDatasetScanner.parseVeremiIndex();
+            Optional<FullDatasetScanner.VeremiRunEntry> sampleRun = index.stream().filter(r -> r.archiveFile.exists()).findFirst();
+            boolean okArchive = false;
+            String actualStr = "Runs=" + index.size();
+            if (sampleRun.isPresent()) {
+                FullDatasetScanner.VeremiArchiveStats vStats = telemetryService.ingestVeremiArchiveAsync(sampleRun.get().archiveFile, 100, null).get();
+                okArchive = vStats.groundTruthEntries > 0 && vStats.bsmMessages > 0 && vStats.sampleRecords.size() == 100;
+                actualStr += ", Archive=" + vStats.archiveName + " (GT=" + vStats.groundTruthEntries + ", BSM=" + vStats.bsmMessages + ")";
+            }
+            boolean pass = (index.size() == 225) && okArchive;
+            results.add(new TestCaseResult("TC-22", "VeReMi index (225 runs) & .tgz GroundTruth+BSM stream",
+                    "Parses 225 runs and streams GroundTruth + Type-3 BSMs from .tgz",
+                    actualStr, pass));
+        } catch (Exception e) {
+            results.add(new TestCaseResult("TC-22", "VeReMi index & .tgz extraction", "225 runs", "Exception: " + e.getMessage(), false));
+        }
+
+        // TC-23: Genuine Multi-Seed (20-seed) & Full Dataset Result Loader Verification
+        try {
+            ResearchResultsLoader.CsvTable s20 = ResearchResultsLoader.loadCsv("multi_seed_summary_20seeds.csv");
+            ResearchResultsLoader.CsvTable r20 = ResearchResultsLoader.loadCsv("multi_seed_all_runs_20seeds.csv");
+            ResearchResultsLoader.CsvTable fCan = ResearchResultsLoader.loadCsv("ciciov_full_metrics.csv");
+            ResearchResultsLoader.CsvTable fV2x = ResearchResultsLoader.loadCsv("veremi_full_metrics.csv");
+            boolean pass = (s20.rows.size() == 14) && (r20.rows.size() == 280) && (fCan.rows.size() == 4) && (fV2x.rows.size() == 4);
+            results.add(new TestCaseResult("TC-23", "Verified research results loader (20-seed & full dataset benchmarks)",
+                    "Loads 14 summary rows, 280 run rows, 4 full-CAN rows, 4 full-V2X rows",
+                    "S20=" + s20.rows.size() + ", R20=" + r20.rows.size() + ", FullCAN=" + fCan.rows.size() + ", FullV2X=" + fV2x.rows.size(), pass));
+        } catch (Exception e) {
+            results.add(new TestCaseResult("TC-23", "Verified research results loader", "All genuine CSVs loaded", "Exception: " + e.getMessage(), false));
+        }
+
+        // Shutdown thread pool and cleanup test database
+        telemetryService.shutdown();
         new File(testDb).delete();
 
         // Print & Save Results

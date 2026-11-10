@@ -17,7 +17,10 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Initializes database tables, executes schema scripts, and seeds initial datasets.
@@ -265,33 +268,54 @@ public class DatabaseInitializer {
 
         String now = LocalDateTime.now().format(ISO_FMT);
 
-        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
-            String header = br.readLine(); // skip header
-            String line;
+        try (BufferedReader br = new BufferedReader(new FileReader(file, StandardCharsets.UTF_8))) {
+            String headerLine = br.readLine();
+            if (headerLine == null) return;
+
+            List<String> headers = CsvHelper.parseLine(headerLine);
+            Map<String, Integer> cols = new HashMap<>();
+            for (int i = 0; i < headers.size(); i++) {
+                cols.put(headers.get(i).trim().toLowerCase(), i);
+            }
 
             conn.setAutoCommit(false);
             try (PreparedStatement pstmt = conn.prepareStatement(insertSql)) {
                 int count = 0;
+                String line;
                 while ((line = br.readLine()) != null) {
+                    if (line.trim().isEmpty()) continue;
                     List<String> tokens = CsvHelper.parseLine(line);
                     if (tokens.size() >= 8) {
                         try {
-                            int offset = (tokens.size() >= 9) ? 1 : 0;
-                            String dataset = (offset == 1) ? tokens.get(0).toLowerCase() : "";
-                            int sampleId = Integer.parseInt(tokens.get(offset));
-                            String attackType = tokens.get(offset + 1);
-                            double confidence = Double.parseDouble(tokens.get(offset + 2));
-                            double riskScore = Double.parseDouble(tokens.get(offset + 3));
-                            String technique = tokens.get(offset + 4);
-                            String techniqueName = tokens.get(offset + 5);
-                            String severity = tokens.get(offset + 6);
-                            String assets = (tokens.size() > offset + 7) ? tokens.get(offset + 7) : "[]";
+                            String dataset = getCol(tokens, cols, "dataset", "").toLowerCase();
+                            int sampleId = Integer.parseInt(getCol(tokens, cols, "sample_id", "0"));
+                            String attackType = getCol(tokens, cols, "predicted_attack",
+                                    getCol(tokens, cols, "attack_type", "UNKNOWN"));
+                            double confidence = Double.parseDouble(getCol(tokens, cols, "confidence", "0.0"));
+                            double riskScore = Double.parseDouble(getCol(tokens, cols, "risk_score", "0.0"));
+                            String technique = getCol(tokens, cols, "mitre_technique", "T0856");
+                            String techniqueName = getCol(tokens, cols, "technique_name", "Unknown Technique");
+                            String severity = getCol(tokens, cols, "severity", "HIGH").toUpperCase();
+                            String assets = getCol(tokens, cols, "target_assets", "[]");
 
-                            // Determine domain and CWE
-                            String domain = dataset.contains("v2x") || attackType.toUpperCase().startsWith("V2X") ? "V2X" : "CAN";
-                            String cwe = domain.equals("CAN") ?
-                                    (attackType.contains("DoS") ? "CWE-400" : "CWE-287") :
-                                    "CWE-345";
+                            String domain = getCol(tokens, cols, "domain", "");
+                            if (domain.isEmpty()) {
+                                domain = (dataset.contains("v2x") || attackType.toUpperCase().startsWith("V2X")) ? "V2X" : "CAN";
+                            }
+                            domain = domain.toUpperCase();
+
+                            String cwe = getCol(tokens, cols, "cwe_id", "");
+                            if (cwe.isEmpty()) {
+                                if (attackType.contains("DoS")) cwe = "CWE-400";
+                                else if (attackType.contains("GAS") || attackType.contains("STEERING")) cwe = "CWE-306";
+                                else if (attackType.contains("RANDOM_POS")) cwe = "CWE-399";
+                                else cwe = "CWE-345";
+                            }
+
+                            String ts = getCol(tokens, cols, "timestamp", now);
+                            if (ts.isEmpty()) ts = now;
+                            String status = getCol(tokens, cols, "status", "NEW").toUpperCase();
+                            if (status.isEmpty()) status = "NEW";
 
                             pstmt.setInt(1, sampleId);
                             pstmt.setString(2, domain);
@@ -303,11 +327,14 @@ public class DatabaseInitializer {
                             pstmt.setString(8, severity);
                             pstmt.setString(9, assets);
                             pstmt.setString(10, cwe);
-                            pstmt.setString(11, now);
-                            pstmt.setString(12, "NEW");
+                            pstmt.setString(11, ts);
+                            pstmt.setString(12, status);
                             pstmt.addBatch();
 
                             count++;
+                            if (count % 1000 == 0) {
+                                pstmt.executeBatch();
+                            }
                         } catch (NumberFormatException ignored) {}
                     }
                 }
@@ -322,6 +349,15 @@ public class DatabaseInitializer {
         } catch (IOException e) {
             System.err.println("Error reading alerts CSV: " + e.getMessage());
         }
+    }
+
+    private static String getCol(List<String> tokens, Map<String, Integer> cols, String name, String fallback) {
+        Integer idx = cols.get(name);
+        if (idx != null && idx >= 0 && idx < tokens.size()) {
+            String val = tokens.get(idx).trim();
+            if (!val.isEmpty()) return val;
+        }
+        return fallback;
     }
 
     private static String getEmbeddedSchemaSql() {

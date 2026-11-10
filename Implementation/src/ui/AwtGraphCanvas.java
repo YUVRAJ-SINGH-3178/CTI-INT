@@ -23,6 +23,8 @@ public class AwtGraphCanvas extends Canvas {
     private final Map<String, Point> nodePositions = new HashMap<>();
     private ThreatNode selectedNode = null;
     private String selectedDetails = "Click any node in the graph to inspect vehicular threat intelligence.";
+    private int lastWidth = -1;
+    private int lastHeight = -1;
 
     public AwtGraphCanvas(Team6_ThreatGraph threatGraphService) {
         this.threatGraphService = threatGraphService;
@@ -57,17 +59,21 @@ public class AwtGraphCanvas extends Canvas {
 
         Map<String, List<ThreatNode>> groups = new LinkedHashMap<>();
         groups.put("Asset", new ArrayList<>());
+        groups.put("Event", new ArrayList<>());
         groups.put("Technique", new ArrayList<>());
         groups.put("Weakness", new ArrayList<>());
-        groups.put("Event", new ArrayList<>());
 
         for (ThreatNode n : nodes) {
             String type = n.getNodeType();
             groups.computeIfAbsent(type, k -> new ArrayList<>()).add(n);
         }
 
-        // 4 Columns for Layered Automotive CTI Topology
-        int colX[] = { 100, width / 3, (2 * width) / 3, width - 120 };
+        // 4 Columns for Layered Automotive CTI Topology (Asset -> Event -> Technique -> Weakness)
+        int c0 = 60;
+        int c1 = (int) (width * 0.29);
+        int c2 = (int) (width * 0.56);
+        int c3 = Math.max((int) (width * 0.80), width - 250);
+        int colX[] = { c0, c1, c2, c3 };
         int colIndex = 0;
 
         for (Map.Entry<String, List<ThreatNode>> entry : groups.entrySet()) {
@@ -92,6 +98,11 @@ public class AwtGraphCanvas extends Canvas {
         int w = getWidth();
         int h = getHeight();
         if (w <= 0 || h <= 0) return;
+        if (w != lastWidth || h != lastHeight) {
+            lastWidth = w;
+            lastHeight = h;
+            calculateLayout();
+        }
 
         Image offscreen = createImage(w, h);
         if (offscreen == null) return;
@@ -106,10 +117,10 @@ public class AwtGraphCanvas extends Canvas {
         // Column Titles
         g2.setFont(new Font("SansSerif", Font.BOLD, 12));
         g2.setColor(new Color(100, 116, 139));
-        g2.drawString("VEHICLE ASSETS (ECUs)", 40, 30);
-        g2.drawString("COMMUNICATION EVENTS", w / 3 - 50, 30);
-        g2.drawString("ATT&CK TECHNIQUES", (2 * w) / 3 - 40, 30);
-        g2.drawString("CWE WEAKNESSES", w - 170, 30);
+        g2.drawString("VEHICLE ASSETS (ECUs)", 30, 30);
+        g2.drawString("COMMUNICATION EVENTS", (int) (w * 0.29) - 45, 30);
+        g2.drawString("ATT&CK TECHNIQUES", (int) (w * 0.56) - 40, 30);
+        g2.drawString("CWE WEAKNESSES", Math.max((int) (w * 0.80), w - 250) - 30, 30);
 
         // Draw Edges
         g2.setStroke(new BasicStroke(1.2f));

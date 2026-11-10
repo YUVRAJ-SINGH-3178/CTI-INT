@@ -55,12 +55,19 @@ public class V2xAlert extends Alert {
 
     @Override
     public String getDomainSpecificDetails() {
+        if (receiverId == 0 && posX == 0.0 && posY == 0.0 && speed == 0.0) {
+            return String.format("V2X Evaluation Sample ID: %d | Spatial Trajectory: Not persisted in summary alert row (inspect VeReMi .tgz stream)",
+                    getSampleId());
+        }
         return String.format("V2X Transmitter ID: %d | Receiver ID: %d | Pos: (%.1f, %.1f) | Velocity: %.1f m/s",
                 senderId, receiverId, posX, posY, speed);
     }
 
     @Override
     public String getDomainExplanation() {
+        if (receiverId == 0 && posX == 0.0 && posY == 0.0 && speed == 0.0) {
+            return String.format("V2X DSRC/C-V2X alert (Sample #%d) classified from VeReMi simulation kinematics.", getSampleId());
+        }
         return String.format("V2X DSRC/C-V2X broadcast: Wireless beacon from vehicle %d to station %d at velocity %.1f m/s.", senderId, receiverId, speed);
     }
 

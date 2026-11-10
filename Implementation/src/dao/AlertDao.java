@@ -237,13 +237,19 @@ public class AlertDao implements Repository<Alert, Integer> {
             String status = rs.getString("status");
 
             if ("CAN".equalsIgnoreCase(domain)) {
-                // Heuristic CAN ID mapping from sample ID
-                int canId = attack.contains("DoS") ? 0x128 : (attack.contains("RPM") ? 0x291 : 0x513);
+                // Empirical CICIoV2024 CAN arbitration IDs (decimal 291=0x123, 513=0x201, 476=0x1DC, 344=0x158, 128=0x080)
+                int canId = 0;
+                String upper = attack.toUpperCase();
+                if (upper.contains("DOS")) canId = 291;
+                else if (upper.contains("GAS")) canId = 513;
+                else if (upper.contains("RPM")) canId = 476;
+                else if (upper.contains("SPEED")) canId = 344;
+                else if (upper.contains("STEERING")) canId = 128;
                 return new CanAlert(alertId, sampleId, attack, conf, risk, tech, techName,
-                                    sev, assets, cwe, time, status, canId, "FE 01 4A 22 00 00 12 FF", 8);
+                                    sev, assets, cwe, time, status, canId, "", 8);
             } else {
                 return new V2xAlert(alertId, sampleId, attack, conf, risk, tech, techName,
-                                    sev, assets, cwe, time, status, 10 + (sampleId % 20), 99, 250.0, 310.0, 22.5);
+                                    sev, assets, cwe, time, status, sampleId, 0, 0.0, 0.0, 0.0);
             }
         } catch (ValidationException e) {
             throw new SQLException("Failed mapping database row to Alert entity: " + e.getMessage(), e);

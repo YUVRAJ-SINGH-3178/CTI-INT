@@ -4,18 +4,23 @@ import model.Alert;
 import model.User;
 import service.*;
 import util.DataAccessException;
-import util.ValidationException;
+import util.FullDatasetScanner;
+import util.ResearchResultsLoader;
+import util.StixAttackLoader;
 
 import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
 import java.util.*;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Main Automotive Cybersecurity Operations Console built with Pure Java AWT.
- * Hosts 7,683 real alerts, 28-node threat graph, and live research verification.
+ * Hosts 7,683 real alerts, 28-node threat graph, live research verification,
+ * and native full-dataset integration (CICIoV2024, VeReMi .tgz, attack-stix-data).
  */
 public class AwtDashboardFrame extends Frame {
 
@@ -25,8 +30,8 @@ public class AwtDashboardFrame extends Frame {
     private final Team6_TelemetryIngest telemetryService;
     private final Team6_RiskRanking riskRankingService;
     private final Team6_UserReports userReportsService;
+    private final ExecutorService backgroundPool = Executors.newSingleThreadExecutor();
 
-    // Card Layout Container
     private final Panel cardContainer = new Panel(new CardLayout());
 
     // Alerts Tab Controls
@@ -38,14 +43,16 @@ public class AwtDashboardFrame extends Frame {
     private final Choice cmbSeverity = new Choice();
 
     // Alert Detail Panel
-    private final TextArea txtAlertDetail = new TextArea(5, 80);
+    private final TextArea txtAlertDetail = new TextArea(6, 80);
     private final Label lblAlertSummary = new Label("Total Real Alerts: 0");
 
-    // Telemetry Ingest Panel Controls
-    private final TextArea txtTelemetryLog = new TextArea(10, 80);
-    private final Label lblTelemetryStatus = new Label("Status: Ready to ingest vehicle telemetry frames.");
+    // Telemetry & Full Datasets Panel Controls
+    private final Choice cmbCanSource = new Choice();
+    private final Choice cmbVeremiArchive = new Choice();
+    private final TextArea txtTelemetryLog = new TextArea(14, 95);
+    private final Label lblTelemetryStatus = new Label("Status: Ready to inspect full datasets (CICIoV2024, VeReMi, attack-stix-data).");
 
-    // Status Bar
+    private AwtGraphCanvas graphCanvas;
     private final Label lblStatus = new Label("Connected: SQLite 3 (vehicle_cti.db) | Genuine Research Dataset Active");
 
     public AwtDashboardFrame(User user,
@@ -74,20 +81,24 @@ public class AwtDashboardFrame extends Frame {
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
+                shutdownServices();
                 dispose();
                 System.exit(0);
             }
         });
 
-        // Initial data loading
         refreshAlerts();
+    }
+
+    private void shutdownServices() {
+        backgroundPool.shutdown();
+        telemetryService.shutdown();
     }
 
     private void initTopNavigation() {
         Panel headerPanel = new Panel(new BorderLayout(5, 5));
         headerPanel.setBackground(new Color(30, 41, 59));
 
-        // Title and User Banner
         Panel titlePanel = new Panel(new FlowLayout(FlowLayout.LEFT, 15, 8));
         Label lblTitle = new Label("CONNECTED VEHICLE CTI SECURITY OPERATIONS CONSOLE");
         lblTitle.setFont(new Font("SansSerif", Font.BOLD, 15));
@@ -100,17 +111,16 @@ public class AwtDashboardFrame extends Frame {
         titlePanel.add(lblUser);
         headerPanel.add(titlePanel, BorderLayout.NORTH);
 
-        // Navigation Tabs (AWT Buttons)
         Panel navBar = new Panel(new FlowLayout(FlowLayout.LEFT, 10, 6));
         navBar.setBackground(new Color(51, 65, 85));
 
         Button btnTabAlerts = createNavButton("1. Ranked Alerts (7,683 Real Alerts)");
         Button btnTabGraph = createNavButton("2. Vehicle Threat Graph (28 Nodes)");
         Button btnTabResults = createNavButton("3. VERIFIED REAL RESULTS (Zero Fake Data)");
-        Button btnTabTelemetry = createNavButton("4. Multithreaded Telemetry Stream");
+        Button btnTabTelemetry = createNavButton("4. Full Datasets, STIX & Async Stream");
         Button btnLogout = createNavButton("Logout / Exit");
 
-        btnTabResults.setBackground(new Color(245, 158, 11)); // Highlighting real results tab
+        btnTabResults.setBackground(new Color(245, 158, 11));
         btnTabResults.setForeground(Color.BLACK);
 
         btnTabAlerts.addActionListener(e -> switchCard("CARD_ALERTS"));
@@ -140,24 +150,23 @@ public class AwtDashboardFrame extends Frame {
         return b;
     }
 
-    private void switchCard(String cardName) {
+    public void switchCard(String cardName) {
         CardLayout cl = (CardLayout) cardContainer.getLayout();
         cl.show(cardContainer, cardName);
+        if ("CARD_GRAPH".equals(cardName) && graphCanvas != null) {
+            graphCanvas.repaint();
+        }
     }
 
     private void initCenterViews() {
-        // Card 1: Alerts View
         cardContainer.add(createAlertsPanel(), "CARD_ALERTS");
 
-        // Card 2: Interactive Threat Graph Canvas
-        AwtGraphCanvas graphCanvas = new AwtGraphCanvas(threatGraphService);
+        graphCanvas = new AwtGraphCanvas(threatGraphService);
         cardContainer.add(graphCanvas, "CARD_GRAPH");
 
-        // Card 3: Real Research Results & Provenance
         AwtResultsPanel resultsPanel = new AwtResultsPanel();
         cardContainer.add(resultsPanel, "CARD_RESULTS");
 
-        // Card 4: Multithreaded Telemetry Monitor
         cardContainer.add(createTelemetryPanel(), "CARD_TELEMETRY");
 
         add(cardContainer, BorderLayout.CENTER);
@@ -167,17 +176,18 @@ public class AwtDashboardFrame extends Frame {
         Panel panel = new Panel(new BorderLayout(6, 6));
         panel.setBackground(new Color(241, 245, 249));
 
-        // Filter Toolbar
         Panel filterBar = new Panel(new FlowLayout(FlowLayout.LEFT, 8, 6));
         filterBar.setBackground(new Color(226, 232, 240));
 
         filterBar.add(new Label("Search:"));
+        txtSearch.addActionListener(e -> refreshAlerts());
         filterBar.add(txtSearch);
 
         filterBar.add(new Label("Domain:"));
         cmbDomain.add("ALL");
         cmbDomain.add("CAN");
         cmbDomain.add("V2X");
+        cmbDomain.addItemListener(e -> refreshAlerts());
         filterBar.add(cmbDomain);
 
         filterBar.add(new Label("Technique:"));
@@ -187,6 +197,8 @@ public class AwtDashboardFrame extends Frame {
         cmbTechnique.add("T0856");
         cmbTechnique.add("T0831");
         cmbTechnique.add("T1498");
+        cmbTechnique.add("T1565.002");
+        cmbTechnique.addItemListener(e -> refreshAlerts());
         filterBar.add(cmbTechnique);
 
         filterBar.add(new Label("Severity:"));
@@ -195,6 +207,7 @@ public class AwtDashboardFrame extends Frame {
         cmbSeverity.add("HIGH");
         cmbSeverity.add("MEDIUM");
         cmbSeverity.add("LOW");
+        cmbSeverity.addItemListener(e -> refreshAlerts());
         filterBar.add(cmbSeverity);
 
         Button btnFilter = new Button("Apply Filters");
@@ -212,7 +225,6 @@ public class AwtDashboardFrame extends Frame {
         });
         filterBar.add(btnReset);
 
-        // Action CRUD Buttons
         Button btnAdd = new Button("+ Add Alert");
         btnAdd.setBackground(new Color(219, 234, 254));
         btnAdd.addActionListener(e -> onAddAlert());
@@ -227,16 +239,15 @@ public class AwtDashboardFrame extends Frame {
         btnDelete.addActionListener(e -> onDeleteAlert());
         filterBar.add(btnDelete);
 
-        Button btnExport = new Button("Export CSV");
+        Button btnExport = new Button("Export Visible CSV");
         btnExport.setBackground(new Color(220, 252, 231));
         btnExport.addActionListener(e -> onExportCsv());
         filterBar.add(btnExport);
 
         panel.add(filterBar, BorderLayout.NORTH);
 
-        // Center: List of Alerts
         Panel listContainer = new Panel(new BorderLayout());
-        Label lblHeader = new Label(String.format(" %-8s %-10s %-8s %-20s %-12s %-12s %-10s %-12s %-10s",
+        Label lblHeader = new Label(String.format(" %-8s %-10s %-8s %-20s %-12s %-14s %-11s %-11s %-10s",
                 "ID", "SAMPLE", "DOMAIN", "PREDICTED ATTACK", "CONFIDENCE", "HEURISTIC RISK", "MITRE", "SEVERITY", "STATUS"));
         lblHeader.setFont(new Font("Monospaced", Font.BOLD, 12));
         lblHeader.setBackground(new Color(203, 213, 225));
@@ -247,7 +258,6 @@ public class AwtDashboardFrame extends Frame {
         listContainer.add(alertList, BorderLayout.CENTER);
         panel.add(listContainer, BorderLayout.CENTER);
 
-        // Bottom: Detail Inspector
         Panel detailPanel = new Panel(new BorderLayout(4, 4));
         detailPanel.setBackground(new Color(241, 245, 249));
 
@@ -257,7 +267,7 @@ public class AwtDashboardFrame extends Frame {
         txtAlertDetail.setFont(new Font("SansSerif", Font.PLAIN, 12));
         txtAlertDetail.setEditable(false);
         txtAlertDetail.setBackground(Color.WHITE);
-        txtAlertDetail.setText("Select any alert above to inspect physical telemetry, ATT&CK details, and heuristic score.");
+        txtAlertDetail.setText("Select any alert above to inspect ATT&CK technique, live STIX 2.1 details, CWE weakness, target assets, and risk score.");
         detailPanel.add(txtAlertDetail, BorderLayout.CENTER);
 
         panel.add(detailPanel, BorderLayout.SOUTH);
@@ -268,32 +278,94 @@ public class AwtDashboardFrame extends Frame {
         Panel panel = new Panel(new BorderLayout(8, 8));
         panel.setBackground(new Color(241, 245, 249));
 
-        Panel top = new Panel(new FlowLayout(FlowLayout.LEFT, 12, 10));
-        top.setBackground(new Color(226, 232, 240));
+        Panel controlsWrapper = new Panel(new GridLayout(2, 1, 4, 4));
+        controlsWrapper.setBackground(new Color(226, 232, 240));
 
-        Label lbl = new Label("Multithreaded Raw Telemetry Stream Ingestion:");
-        lbl.setFont(new Font("SansSerif", Font.BOLD, 12));
-        top.add(lbl);
+        // Row 1: CICIoV2024 Controls
+        Panel row1 = new Panel(new FlowLayout(FlowLayout.LEFT, 10, 6));
+        Label lblCan = new Label("CICIoV2024 CAN CSV:");
+        lblCan.setFont(new Font("SansSerif", Font.BOLD, 12));
+        row1.add(lblCan);
 
-        Button btnIngestCan = new Button("Ingest CAN Telemetry Stream (Async)");
-        btnIngestCan.setBackground(new Color(219, 234, 254));
-        btnIngestCan.addActionListener(e -> runTelemetryIngest("CAN"));
-        top.add(btnIngestCan);
+        populateCanSources();
+        row1.add(cmbCanSource);
 
-        Button btnIngestV2x = new Button("Ingest V2X Telemetry Stream (Async)");
-        btnIngestV2x.setBackground(new Color(254, 243, 199));
-        btnIngestV2x.addActionListener(e -> runTelemetryIngest("V2X"));
-        top.add(btnIngestV2x);
+        Button btnIngestCanSample = new Button("Ingest Batch (5,000 Frames Async)");
+        btnIngestCanSample.setBackground(new Color(219, 234, 254));
+        btnIngestCanSample.addActionListener(e -> runCanStreamIngest(5000));
+        row1.add(btnIngestCanSample);
 
-        panel.add(top, BorderLayout.NORTH);
+        Button btnScanAllCan = new Button("Verify All 6 CICIoV2024 CSVs (1.4M Frames)");
+        btnScanAllCan.setBackground(new Color(191, 219, 254));
+        btnScanAllCan.addActionListener(e -> runFullCiciovScan());
+        row1.add(btnScanAllCan);
+
+        Button btnLoadStix = new Button("Load Full MITRE attack-stix-data (JSON)");
+        btnLoadStix.setBackground(new Color(253, 230, 138));
+        btnLoadStix.addActionListener(e -> runFullStixScan());
+        row1.add(btnLoadStix);
+
+        // Row 2: VeReMi Controls
+        Panel row2 = new Panel(new FlowLayout(FlowLayout.LEFT, 10, 6));
+        Label lblV2x = new Label("VeReMi Archive (.tgz):");
+        lblV2x.setFont(new Font("SansSerif", Font.BOLD, 12));
+        row2.add(lblV2x);
+
+        populateVeremiArchives();
+        row2.add(cmbVeremiArchive);
+
+        Button btnStreamVeremi = new Button("Extract & Ingest Selected .tgz (Async)");
+        btnStreamVeremi.setBackground(new Color(220, 252, 231));
+        btnStreamVeremi.addActionListener(e -> runVeremiArchiveIngest());
+        row2.add(btnStreamVeremi);
+
+        Button btnScanVeremiIdx = new Button("Verify All 225 VeReMi Runs (index.md)");
+        btnScanVeremiIdx.setBackground(new Color(167, 243, 208));
+        btnScanVeremiIdx.addActionListener(e -> runVeremiIndexAudit());
+        row2.add(btnScanVeremiIdx);
+
+        controlsWrapper.add(row1);
+        controlsWrapper.add(row2);
+        panel.add(controlsWrapper, BorderLayout.NORTH);
 
         txtTelemetryLog.setFont(new Font("Monospaced", Font.PLAIN, 12));
         txtTelemetryLog.setEditable(false);
-        txtTelemetryLog.setText("Ready. Click an ingestion button above to stream telemetry in a background thread.\n");
+        txtTelemetryLog.setBackground(Color.WHITE);
+        txtTelemetryLog.setText("Ready. Select any full-dataset action above (CICIoV2024, VeReMi .tgz, or attack-stix-data) to run on background threads.\n");
         panel.add(txtTelemetryLog, BorderLayout.CENTER);
 
+        lblTelemetryStatus.setFont(new Font("SansSerif", Font.BOLD, 11));
         panel.add(lblTelemetryStatus, BorderLayout.SOUTH);
         return panel;
+    }
+
+    private void populateCanSources() {
+        File canDir = FullDatasetScanner.resolveDir("CICIoV2024");
+        if (canDir != null) {
+            File[] files = canDir.listFiles((d, name) -> name.startsWith("decimal_") && name.endsWith(".csv"));
+            if (files != null) {
+                Arrays.sort(files, Comparator.comparing(File::getName));
+                for (File f : files) cmbCanSource.add("CICIoV2024/" + f.getName());
+            }
+        }
+        cmbCanSource.add("Dataset/telemetry_sample_can.csv");
+    }
+
+    private void populateVeremiArchives() {
+        try {
+            List<FullDatasetScanner.VeremiRunEntry> entries = FullDatasetScanner.parseVeremiIndex();
+            int added = 0;
+            for (FullDatasetScanner.VeremiRunEntry e : entries) {
+                if (e.archiveFile.exists()) {
+                    cmbVeremiArchive.add(e.archiveName + " [Rep " + e.repetition + ", Atk " + FullDatasetScanner.veremiAttackName(e.attackerType) + "]");
+                    added++;
+                    if (added >= 25) break; // keep Choice menu responsive while scanning all 225 via audit
+                }
+            }
+        } catch (Exception ignored) {}
+        if (cmbVeremiArchive.getItemCount() == 0) {
+            cmbVeremiArchive.add("Dataset/telemetry_sample_v2x.csv");
+        }
     }
 
     private void initBottomStatusBar() {
@@ -304,7 +376,7 @@ public class AwtDashboardFrame extends Frame {
         add(bottom, BorderLayout.SOUTH);
     }
 
-    private void refreshAlerts() {
+    public void refreshAlerts() {
         try {
             String q = txtSearch.getText().trim();
             String dom = cmbDomain.getSelectedItem();
@@ -312,30 +384,25 @@ public class AwtDashboardFrame extends Frame {
             String sev = cmbSeverity.getSelectedItem();
 
             List<Alert> all = alertService.getAllAlerts();
+            List<Alert> filtered = alertService.filterAlerts(q, dom, tech, sev);
+
             displayedAlerts.clear();
-            displayedAlerts.addAll(all.stream()
-                    .filter(a -> dom.equals("ALL") || a.getDomain().equalsIgnoreCase(dom))
-                    .filter(a -> tech.equals("ALL") || a.getMitreTechnique().equalsIgnoreCase(tech))
-                    .filter(a -> sev.equals("ALL") || a.getSeverity().equalsIgnoreCase(sev))
-                    .filter(a -> q.isEmpty() || a.getAttackType().toLowerCase().contains(q.toLowerCase()))
-                    .sorted(Comparator.comparingDouble(Alert::getRiskScore).reversed())
-                    .collect(Collectors.toList()));
+            displayedAlerts.addAll(filtered);
 
             alertList.removeAll();
-            // Display first 1,000 for smooth AWT rendering if large
             int limit = Math.min(displayedAlerts.size(), 1000);
             for (int i = 0; i < limit; i++) {
                 Alert a = displayedAlerts.get(i);
-                alertList.add(String.format(" #%-6d %-10d %-8s %-20s %-12.4f %-12.2f %-10s %-12s %-10s",
+                alertList.add(String.format(" #%-6d %-10d %-8s %-20s %-12.4f %-14.2f %-11s %-11s %-10s",
                         a.getAlertId(), a.getSampleId(), a.getDomain(), a.getAttackType(),
                         a.getConfidence(), a.getRiskScore(), a.getMitreTechnique(), a.getSeverity(), a.getStatus()));
             }
 
-            lblAlertSummary.setText("Total Real Alerts in System: " + all.size() + " | Matching Filter: " + displayedAlerts.size() +
-                    (displayedAlerts.size() > 1000 ? " (Displaying top 1,000)" : ""));
+            lblAlertSummary.setText("Total Real Alerts in Database: " + all.size() + " | Matching Filter: " + displayedAlerts.size() +
+                    (displayedAlerts.size() > 1000 ? " (Displaying top 1,000 in list; Export CSV saves all " + displayedAlerts.size() + ")" : ""));
             lblStatus.setText("Database Active: " + all.size() + " genuine alerts loaded from SQLite 3 (vehicle_cti.db)");
         } catch (DataAccessException e) {
-            lblStatus.setText("Error loading alerts: " + e.getMessage());
+            showErrorDialog("Database Error", e.getMessage());
         }
     }
 
@@ -345,18 +412,39 @@ public class AwtDashboardFrame extends Frame {
 
         Alert a = displayedAlerts.get(idx);
         StringBuilder sb = new StringBuilder();
-        sb.append(String.format("ALERT ID #%d | Domain: %s | Predicted Attack: %s | Confidence: %.4f | Heuristic Risk: %.2f\n",
-                a.getAlertId(), a.getDomain(), a.getAttackType(), a.getConfidence(), a.getRiskScore()));
+        sb.append(String.format("ALERT ID #%d | Sample: %d | Domain: %s | Predicted Attack: %s | Confidence: %.4f | Heuristic Risk: %.2f\n",
+                a.getAlertId(), a.getSampleId(), a.getDomain(), a.getAttackType(), a.getConfidence(), a.getRiskScore()));
         sb.append("MITRE ATT&CK: ").append(a.getMitreTechnique()).append(" (").append(a.getTechniqueName()).append(")");
-        sb.append(" | Vulnerability: ").append(a.getCweId()).append(" | Severity: ").append(a.getSeverity()).append("\n");
-        sb.append("Target Assets: ").append(a.getTargetAssets()).append("\n");
-        sb.append("Domain Physical Details: ").append(a.getDomainSpecificDetails()).append("\n");
+        sb.append(" | Weakness: ").append(a.getCweId()).append(" | Severity: ").append(a.getSeverity()).append("\n");
+        sb.append("Affected Assets: ").append(a.getTargetAssets()).append("\n");
+        sb.append("Domain Details: ").append(a.getDomainSpecificDetails()).append("\n");
         sb.append("Vehicular Context: ").append(a.getDomainExplanation()).append("\n");
+        sb.append("MITRE STIX Lookup: Loading details from attack-stix-data...");
         txtAlertDetail.setText(sb.toString());
+
+        final int selectedAlertId = a.getAlertId();
+        final String mitreId = a.getMitreTechnique();
+        CompletableFuture.supplyAsync(() -> StixAttackLoader.lookupTechnique(mitreId), backgroundPool)
+                .thenAccept(optTech -> EventQueue.invokeLater(() -> {
+                    int curIdx = alertList.getSelectedIndex();
+                    if (curIdx >= 0 && curIdx < displayedAlerts.size() && displayedAlerts.get(curIdx).getAlertId() == selectedAlertId) {
+                        String stixLine;
+                        if (optTech.isPresent()) {
+                            StixAttackLoader.StixTechnique st = optTech.get();
+                            String descShort = st.description.length() > 190 ? st.description.substring(0, 187) + "..." : st.description;
+                            stixLine = String.format("STIX 2.1 [%s%s | Tactics: %s]: %s (%s)",
+                                    st.domain, (st.revoked ? " - Legacy/Revoked" : ""),
+                                    String.join(", ", st.tactics), descShort, st.url);
+                        } else {
+                            stixLine = "STIX 2.1: Technique " + mitreId + " not found in local attack-stix-data bundle.";
+                        }
+                        txtAlertDetail.setText(sb.toString().replace("MITRE STIX Lookup: Loading details from attack-stix-data...", stixLine));
+                    }
+                }));
     }
 
     private void onAddAlert() {
-        AwtAlertFormDialog dialog = new AwtAlertFormDialog(this, "Add New Security Alert", null, alertService);
+        AwtAlertFormDialog dialog = new AwtAlertFormDialog(this, "Add New Security Alert", null, alertService, riskRankingService);
         dialog.setVisible(true);
         if (dialog.isSaved()) {
             refreshAlerts();
@@ -365,12 +453,12 @@ public class AwtDashboardFrame extends Frame {
 
     private void onEditAlert() {
         int idx = alertList.getSelectedIndex();
-        if (idx < 0) {
-            txtAlertDetail.setText("Please select an alert from the list to edit.");
+        if (idx < 0 || idx >= displayedAlerts.size()) {
+            showInfoDialog("No Selection", "Please select an alert from the list to edit.");
             return;
         }
         Alert a = displayedAlerts.get(idx);
-        AwtAlertFormDialog dialog = new AwtAlertFormDialog(this, "Edit Alert #" + a.getAlertId(), a, alertService);
+        AwtAlertFormDialog dialog = new AwtAlertFormDialog(this, "Edit Alert #" + a.getAlertId(), a, alertService, riskRankingService);
         dialog.setVisible(true);
         if (dialog.isSaved()) {
             refreshAlerts();
@@ -379,49 +467,251 @@ public class AwtDashboardFrame extends Frame {
 
     private void onDeleteAlert() {
         int idx = alertList.getSelectedIndex();
-        if (idx < 0) {
-            txtAlertDetail.setText("Please select an alert from the list to delete.");
+        if (idx < 0 || idx >= displayedAlerts.size()) {
+            showInfoDialog("No Selection", "Please select an alert from the list to delete.");
             return;
         }
         Alert a = displayedAlerts.get(idx);
+        boolean confirmed = showConfirmDialog("Confirm Alert Deletion",
+                "Delete Alert ID #" + a.getAlertId() + " (" + a.getDomain() + " - " + a.getAttackType() + ") from SQLite?");
+        if (!confirmed) {
+            return;
+        }
         try {
             boolean ok = alertService.ap25110090004_AlertManagement_delete(a.getAlertId());
             if (ok) {
-                txtAlertDetail.setText("Successfully deleted alert ID #" + a.getAlertId());
+                txtAlertDetail.setText("Deleted alert ID #" + a.getAlertId() + " after operator confirmation.");
                 refreshAlerts();
             }
         } catch (DataAccessException e) {
-            txtAlertDetail.setText("Delete failed: " + e.getMessage());
+            showErrorDialog("Delete Error", e.getMessage());
         }
     }
 
     private void onExportCsv() {
+        FileDialog fd = new FileDialog(this, "Export Visible Alerts to CSV", FileDialog.SAVE);
+        fd.setFile("exported_alerts_audit.csv");
+        fd.setVisible(true);
+        String dir = fd.getDirectory();
+        String file = fd.getFile();
+        if (dir == null || file == null) return;
+
         try {
-            File exportFile = new File("exported_alerts_audit.csv");
+            File exportFile = new File(dir, file);
             userReportsService.exportAlertsToCsv(displayedAlerts, exportFile, currentUser.getUsername());
-            txtAlertDetail.setText("Exported " + displayedAlerts.size() + " alerts successfully to: " + exportFile.getAbsolutePath());
+            String msg = "Exported " + displayedAlerts.size() + " alerts cleanly to:\n" + exportFile.getAbsolutePath();
+            txtAlertDetail.setText(msg);
+            showInfoDialog("CSV Export Complete", msg);
         } catch (Exception ex) {
-            txtAlertDetail.setText("Export failed: " + ex.getMessage());
+            showErrorDialog("CSV Export Error", ex.getMessage());
         }
     }
 
-    private void runTelemetryIngest(String domain) {
-        String filename = domain.equalsIgnoreCase("CAN") ? "telemetry_sample_can.csv" : "telemetry_sample_v2x.csv";
-        File file = new File(util.ResearchResultsLoader.resolveDatasetDir(), filename);
+    private void runCanStreamIngest(int maxRows) {
+        String selected = cmbCanSource.getSelectedItem();
+        if (selected == null) return;
 
-        txtTelemetryLog.append("[*] Starting multithreaded ingestion for " + domain + " from: " + file.getName() + "...\n");
-        lblTelemetryStatus.setText("Status: Ingesting " + domain + " in background thread...");
+        File target;
+        if (selected.startsWith("CICIoV2024/")) {
+            target = new File(FullDatasetScanner.resolveDir("CICIoV2024"), selected.substring("CICIoV2024/".length()));
+        } else {
+            target = new File(ResearchResultsLoader.resolveDatasetDir(), "telemetry_sample_can.csv");
+        }
 
-        telemetryService.ingestCsvAsync(file, domain, pct -> {
-            lblTelemetryStatus.setText("Status: Ingesting " + domain + " ... (" + pct + " records processed)");
-        }).thenAccept(total -> {
-            txtTelemetryLog.append("[+] Successfully ingested " + total + " telemetry frames into SQLite (telemetry_records)!\n");
-            lblTelemetryStatus.setText("Status: Complete. Ingested " + total + " " + domain + " frames.");
-        }).exceptionally(ex -> {
-            txtTelemetryLog.append("[-] Ingestion error: " + ex.getMessage() + "\n");
-            lblTelemetryStatus.setText("Status: Ingestion failed.");
+        appendLog("[*] Async CAN ingestion started from: " + target.getName() + " (limit " + maxRows + " rows)...");
+        updateTelemetryStatus("Status: Streaming CAN frames in background thread...");
+
+        telemetryService.ingestCsvAsync(target, "CAN", maxRows, pct -> {
+            EventQueue.invokeLater(() -> updateTelemetryStatus("Status: Ingested " + pct + " CAN frames..."));
+        }).thenAccept(total -> EventQueue.invokeLater(() -> {
+            appendLog("[+] Ingested " + total + " genuine CAN frames from " + target.getName() + " into SQLite telemetry_records.");
+            updateTelemetryStatus("Status: CAN ingest complete (" + total + " frames persisted).");
+        })).exceptionally(ex -> {
+            EventQueue.invokeLater(() -> {
+                appendLog("[-] CAN ingest failed: " + ex.getMessage());
+                updateTelemetryStatus("Status: CAN ingest error.");
+            });
             return null;
         });
     }
-}
 
+    private void runFullCiciovScan() {
+        appendLog("[*] Scanning ALL 6 CICIoV2024 raw CAN CSV files on background thread...\n");
+        updateTelemetryStatus("Status: Scanning 1.4M+ CICIoV2024 CAN frames...");
+
+        CompletableFuture.supplyAsync(() -> {
+            try {
+                return FullDatasetScanner.scanAllCiciov2024Files();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }, backgroundPool).thenAccept(list -> EventQueue.invokeLater(() -> {
+            long totalFrames = 0;
+            StringBuilder sb = new StringBuilder("\n=== COMPLETE CICIoV2024 CAN BUS AUDIT (LIVE FROM DISK) ===\n");
+            for (FullDatasetScanner.CanStreamSummary s : list) {
+                totalFrames += s.frameCount;
+                sb.append(String.format(" - %-36s | Frames: %,10d | Class: %-15s | Unique CAN IDs: %d\n",
+                        s.fileName, s.frameCount, s.attackClass, s.uniqueCanIds.size()));
+            }
+            sb.append(String.format("[+] TOTAL CICIoV2024 FRAMES VERIFIED: %,d across %d files\n", totalFrames, list.size()));
+            appendLog(sb.toString());
+            updateTelemetryStatus("Status: Verified " + String.format("%,d", totalFrames) + " real CICIoV2024 CAN frames.");
+        })).exceptionally(ex -> {
+            EventQueue.invokeLater(() -> {
+                appendLog("[-] CICIoV2024 scan error: " + ex.getMessage());
+                updateTelemetryStatus("Status: CICIoV2024 scan error.");
+            });
+            return null;
+        });
+    }
+
+    private void runVeremiArchiveIngest() {
+        String selected = cmbVeremiArchive.getSelectedItem();
+        if (selected == null) return;
+        String archiveName = selected.split(" ")[0];
+        File veremiRoot = FullDatasetScanner.resolveDir("VeReMi");
+        if (veremiRoot == null) {
+            appendLog("[-] VeReMi directory not found.");
+            return;
+        }
+        File tgzFile = new File(veremiRoot, "VeReMi/securecomm2018/" + archiveName);
+        appendLog("[*] Streaming real VeReMi .tgz archive on background thread: " + archiveName + " ...");
+        updateTelemetryStatus("Status: Decompressing and joining VeReMi GroundTruth + BSM JSON...");
+
+        telemetryService.ingestVeremiArchiveAsync(tgzFile, 250, count -> {
+            EventQueue.invokeLater(() -> updateTelemetryStatus("Status: Persisted " + count + " VeReMi BSM records..."));
+        }).thenAccept(stats -> EventQueue.invokeLater(() -> {
+            StringBuilder sb = new StringBuilder();
+            sb.append(String.format("[+] VeReMi Archive '%s': GroundTruth=%d, Type-3 BSMs=%,d, Sampled to DB=%d\n",
+                    stats.archiveName, stats.groundTruthEntries, stats.bsmMessages, stats.sampleRecords.size()));
+            sb.append("    Attacker Distribution: ").append(stats.attackerTypeCounts).append("\n");
+            appendLog(sb.toString());
+            updateTelemetryStatus("Status: VeReMi archive verified (" + String.format("%,d", stats.bsmMessages) + " BSMs).");
+        })).exceptionally(ex -> {
+            EventQueue.invokeLater(() -> {
+                appendLog("[-] VeReMi archive error: " + ex.getMessage());
+                updateTelemetryStatus("Status: VeReMi ingest error.");
+            });
+            return null;
+        });
+    }
+
+    private void runVeremiIndexAudit() {
+        appendLog("[*] Auditing VeReMi/VeReMi/index.md across all simulation repetitions...\n");
+        updateTelemetryStatus("Status: Parsing VeReMi index...");
+
+        CompletableFuture.supplyAsync(() -> {
+            try {
+                return FullDatasetScanner.parseVeremiIndex();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }, backgroundPool).thenAccept(entries -> EventQueue.invokeLater(() -> {
+            int present = 0;
+            Map<String, Integer> splitCounts = new TreeMap<>();
+            for (FullDatasetScanner.VeremiRunEntry e : entries) {
+                if (e.archiveFile.exists()) present++;
+                splitCounts.merge(e.split, 1, Integer::sum);
+            }
+            String msg = String.format("\n[+] VeReMi Simulation Index: %d total runs listed | %d .tgz archives present on disk | Splits: %s\n",
+                    entries.size(), present, splitCounts);
+            appendLog(msg);
+            updateTelemetryStatus("Status: Verified " + present + " / " + entries.size() + " VeReMi .tgz archives on disk.");
+        })).exceptionally(ex -> {
+            EventQueue.invokeLater(() -> appendLog("[-] VeReMi index error: " + ex.getMessage()));
+            return null;
+        });
+    }
+
+    private void runFullStixScan() {
+        appendLog("[*] Streaming MITRE ATT&CK STIX 2.1 bundles (ics-attack.json & enterprise-attack.json)...\n");
+        updateTelemetryStatus("Status: Parsing attack-stix-data JSON bundles...");
+
+        CompletableFuture.supplyAsync(() -> {
+            try {
+                return StixAttackLoader.getCatalog();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }, backgroundPool).thenAccept(catalog -> EventQueue.invokeLater(() -> {
+            StringBuilder sb = new StringBuilder("\n=== FULL MITRE ATT&CK STIX 2.1 EXTRACTION ===\n");
+            sb.append(String.format(" - ICS ATT&CK Techniques        : %d\n", StixAttackLoader.getIcsTechniqueCount()));
+            sb.append(String.format(" - Enterprise ATT&CK Techniques : %d\n", StixAttackLoader.getEnterpriseTechniqueCount()));
+            sb.append(String.format(" - Combined Active Techniques   : %d\n", catalog.size()));
+            String[] projectIds = {"T0814", "T0855", "T0856", "T0831", "T1498", "T1565.002"};
+            for (String id : projectIds) {
+                StixAttackLoader.StixTechnique st = catalog.get(id);
+                if (st != null) {
+                    sb.append(String.format("   * %-9s | %-28s | Tactics: %s\n", st.mitreId, st.name, st.tactics));
+                }
+            }
+            appendLog(sb.toString());
+            updateTelemetryStatus("Status: Loaded " + catalog.size() + " MITRE ATT&CK STIX techniques.");
+        })).exceptionally(ex -> {
+            EventQueue.invokeLater(() -> appendLog("[-] STIX parse error: " + ex.getMessage()));
+            return null;
+        });
+    }
+
+    private void appendLog(String text) {
+        txtTelemetryLog.append(text);
+    }
+
+    private void updateTelemetryStatus(String status) {
+        lblTelemetryStatus.setText(status);
+    }
+
+    private void showInfoDialog(String title, String message) {
+        showSimpleModalDialog(title, message, false);
+    }
+
+    private void showErrorDialog(String title, String message) {
+        showSimpleModalDialog(title, "Error: " + message, false);
+    }
+
+    private boolean showConfirmDialog(String title, String message) {
+        return showSimpleModalDialog(title, message, true);
+    }
+
+    private boolean showSimpleModalDialog(String title, String message, boolean askConfirm) {
+        final boolean[] confirmed = {false};
+        Dialog dlg = new Dialog(this, title, true);
+        dlg.setLayout(new BorderLayout(10, 10));
+        dlg.setSize(480, 170);
+        dlg.setLocationRelativeTo(this);
+        dlg.setBackground(new Color(248, 250, 252));
+
+        TextArea ta = new TextArea(message, 3, 50, TextArea.SCROLLBARS_NONE);
+        ta.setEditable(false);
+        ta.setBackground(Color.WHITE);
+        dlg.add(ta, BorderLayout.CENTER);
+
+        Panel btns = new Panel(new FlowLayout(FlowLayout.RIGHT, 10, 8));
+        if (askConfirm) {
+            Button btnYes = new Button("Confirm");
+            btnYes.setBackground(new Color(220, 38, 38));
+            btnYes.setForeground(Color.WHITE);
+            btnYes.addActionListener(e -> {
+                confirmed[0] = true;
+                dlg.dispose();
+            });
+            Button btnNo = new Button("Cancel");
+            btnNo.addActionListener(e -> dlg.dispose());
+            btns.add(btnNo);
+            btns.add(btnYes);
+        } else {
+            Button btnOk = new Button("OK");
+            btnOk.addActionListener(e -> dlg.dispose());
+            btns.add(btnOk);
+        }
+        dlg.add(btns, BorderLayout.SOUTH);
+        dlg.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                dlg.dispose();
+            }
+        });
+        dlg.setVisible(true);
+        return confirmed[0];
+    }
+}

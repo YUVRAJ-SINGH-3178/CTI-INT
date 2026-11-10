@@ -51,6 +51,10 @@ public class CanAlert extends Alert {
 
     @Override
     public String getDomainSpecificDetails() {
+        if (payloadHex == null || payloadHex.isBlank()) {
+            return String.format("CAN Arbitration ID: 0x%03X (%d) | DLC: %d | Payload: Not persisted in summary alert row (inspect CICIoV2024 CSV stream)",
+                    canId, canId, dlc);
+        }
         return String.format("CAN Arbitration ID: 0x%03X (%d) | DLC: %d | Payload: %s",
                 canId, canId, dlc, payloadHex);
     }
