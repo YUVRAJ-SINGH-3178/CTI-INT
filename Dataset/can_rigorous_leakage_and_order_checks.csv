@@ -1,0 +1,13 @@
+accuracy,attack_attribution_acc,precision_macro,recall_macro,f1_macro,false_positive_rate,experiment,model,train_size,test_size,removed_overlap_count,features_used,eval_train_samples,eval_test_samples
+1.0,1.0,1.0,1.0,1.0,0.0,Strictly_Non_Overlapping_Test,KNN,41993,7552,1447.0,,,
+1.0,1.0,1.0,1.0,1.0,0.0,Strictly_Non_Overlapping_Test,Random Forest,41993,7552,1447.0,,,
+1.0,1.0,1.0,1.0,1.0,0.0,Strictly_Non_Overlapping_Test,SVM,41993,7552,1447.0,,,
+1.0,1.0,1.0,1.0,1.0,0.0,Strictly_Non_Overlapping_Test,XGBoost,41993,7552,1447.0,,,
+1.0,1.0,1.0,1.0,1.0,0.0,Order_Independent_Features_Only,KNN,41993,8999,,order_independent_only,,
+1.0,1.0,1.0,1.0,1.0,0.0,Order_Independent_Features_Only,Random Forest,41993,8999,,order_independent_only,,
+1.0,1.0,1.0,1.0,1.0,0.0,Order_Independent_Features_Only,SVM,41993,8999,,order_independent_only,,
+1.0,1.0,1.0,1.0,1.0,0.0,Order_Independent_Features_Only,XGBoost,41993,8999,,order_independent_only,,
+0.9427333333333333,0.561846467737822,0.5733214120355941,0.6666666666666666,0.6033380620137675,0.0,Full_1.4M_Contiguous_Time_Block_Split,KNN,985750,211235,,,100000.0,30000.0
+0.9427,0.5615914307574599,0.45840425347415786,0.666560779330792,0.5133658429273301,0.0,Full_1.4M_Contiguous_Time_Block_Split,Random Forest,985750,211235,,,100000.0,30000.0
+0.9427333333333333,0.561846467737822,0.5766715246675455,0.6666666666666666,0.6050301893366173,0.0,Full_1.4M_Contiguous_Time_Block_Split,SVM,985750,211235,,,100000.0,30000.0
+0.9821666666666666,0.8635552155062484,0.7814318975552969,0.8333333333333334,0.8025968056991841,0.0,Full_1.4M_Contiguous_Time_Block_Split,XGBoost,985750,211235,,,100000.0,30000.0

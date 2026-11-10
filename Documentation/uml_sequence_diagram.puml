@@ -1,0 +1,60 @@
+@startuml
+autonumber
+skinparam roundcorner 10
+skinparam shadowing true
+
+actor "Security Analyst" as Analyst
+boundary "MainDashboardFrame" as UI
+boundary "AlertFormDialog" as Form
+control "Team6_AlertManagement" as AlertService
+control "Team6_RiskRanking" as RiskService
+entity "CanAlert / V2xAlert" as Model
+database "AlertDao" as DAO
+database "SQLite Database" as DB
+
+Analyst -> UI : Click "Add Alert..."
+UI -> Form : Open AlertFormDialog(null)
+Form --> Analyst : Display Input Fields
+
+Analyst -> Form : Enter SampleID, Domain="CAN", Attack="DoS", Conf=0.98
+Analyst -> Form : Click "Save Alert"
+Form -> Model : Instantiate CanAlert(canId=0x128, ...)
+Form -> Form : Validate Form Inputs
+Form --> UI : Return Alert Instance
+
+UI -> AlertService : ap25110090004_AlertManagement_create(alert)
+activate AlertService
+AlertService -> AlertService : validateAlert(alert)
+AlertService -> RiskService : recalculateHeuristicRiskScores([alert])
+activate RiskService
+RiskService -> Model : calculateHeuristicRisk(criticality=5.0, impact=4.0)
+activate Model
+note right of Model
+  Polymorphic Calculation:
+  CAN domain incorporates
+  bus arbitration factor (1.15)
+end note
+Model --> RiskService : Return Heuristic Risk Score (20.70)
+deactivate Model
+RiskService --> AlertService : Return Scored Alert
+deactivate RiskService
+
+AlertService -> DAO : save(alert)
+activate DAO
+DAO -> DB : PreparedStatement: INSERT INTO alerts (...)
+DB --> DAO : Return Generated alert_id=43
+DAO --> AlertService : Return Persisted Alert
+deactivate DAO
+
+AlertService --> UI : Alert Created Successfully
+deactivate AlertService
+
+UI -> UI : refreshAlertsTable()
+UI -> DAO : findAll()
+DAO -> DB : SELECT * FROM alerts ORDER BY risk_score DESC
+DB --> DAO : ResultSet
+DAO --> UI : List<Alert>
+UI --> Analyst : Display Updated Table & Detail Breakdown
+
+@enduml
+

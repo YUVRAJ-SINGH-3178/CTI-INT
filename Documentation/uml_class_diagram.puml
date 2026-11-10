@@ -1,0 +1,246 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam monochrome false
+skinparam roundcorner 10
+skinparam shadowing true
+
+package "model" {
+    abstract class Alert {
+        - int alertId
+        - int sampleId
+        - String domain
+        - String attackType
+        - double confidence
+        - double riskScore
+        - String mitreTechnique
+        - String techniqueName
+        - String severity
+        - String targetAssets
+        - String cweId
+        - String timestamp
+        - String status
+        + {abstract} String getDomain()
+        + {abstract} double calculateHeuristicRisk(double criticality, double impact)
+        + {abstract} String getDomainSpecificDetails()
+        + {abstract} String getDomainExplanation()
+        + String describe()
+        + String toCsvRow()
+        + int getAlertId()
+        + void setAlertId(int id)
+        + String getAttackType()
+        + void setAttackType(String type)
+        + double getConfidence()
+        + void setConfidence(double conf)
+        + double getRiskScore()
+        + void setRiskScore(double score)
+    }
+
+    class CanAlert {
+        - int canId
+        - String payloadHex
+        - int dlc
+        + double calculateHeuristicRisk(double criticality, double impact)
+        + String getDomainSpecificDetails()
+        + String getDomainExplanation()
+        + int getCanId()
+        + String getPayloadHex()
+    }
+
+    class V2xAlert {
+        - int senderId
+        - int receiverId
+        - double posX
+        - double posY
+        - double speed
+        + double calculateHeuristicRisk(double criticality, double impact)
+        + String getDomainSpecificDetails()
+        + String getDomainExplanation()
+        + int getSenderId()
+        + double getSpeed()
+    }
+
+    class ThreatNode {
+        - String nodeId
+        - String nodeName
+        - String nodeType
+        - String description
+        - double criticality
+        + String getNodeId()
+        + String getNodeName()
+        + String getNodeType()
+        + double getCriticality()
+    }
+
+    class ThreatEdge {
+        - int edgeId
+        - String sourceNode
+        - String targetNode
+        - String relationType
+        - double weight
+        + String getSourceNode()
+        + String getTargetNode()
+    }
+
+    class TelemetryRecord {
+        - int recordId
+        - String domain
+        - double timestamp
+        - String sourceId
+        - String payloadData
+        - String statusFlag
+        - String ingestedAt
+    }
+
+    class RiskConfig {
+        - int configId
+        - String assetName
+        - double criticalityFactor
+        - double impactWeight
+        - double baselineThreshold
+        - String updatedAt
+    }
+
+    class User {
+        - int userId
+        - String username
+        - String passwordHash
+        - String salt
+        - String fullName
+        - String role
+        - String createdAt
+    }
+
+    class AuditReport {
+        - int reportId
+        - String reportTitle
+        - String exportedBy
+        - String filePath
+        - int recordCount
+        - String generatedAt
+    }
+
+    class "Result<T>" as Result {
+        - boolean success
+        - T data
+        - String message
+        - long timestamp
+        + {static} Result<T> success(T data)
+        + {static} Result<T> failure(String msg)
+    }
+
+    Alert <|-- CanAlert
+    Alert <|-- V2xAlert
+}
+
+package "dao" {
+    interface "Repository<T, ID>" as Repository {
+        + T save(T entity)
+        + Optional<T> findById(ID id)
+        + List<T> findAll()
+        + boolean update(T entity)
+        + boolean deleteById(ID id)
+    }
+
+    interface "Ranker<T>" as Ranker {
+        + List<T> rank(List<T> items)
+        + List<T> rankWithComparator(List<T> items, Comparator<T> comp)
+    }
+
+    class AlertDao implements Repository {
+        + Alert save(Alert a)
+        + Optional<Alert> findById(Integer id)
+        + List<Alert> findAll()
+        + boolean update(Alert a)
+        + boolean deleteById(Integer id)
+        + List<Alert> searchAlerts(String keyword)
+        + int saveAllBatch(List<Alert> alerts)
+    }
+
+    class ThreatGraphDao implements Repository {
+        + ThreatNode save(ThreatNode n)
+        + Optional<ThreatNode> findById(String id)
+        + List<ThreatNode> findAll()
+        + Map<String, List<ThreatEdge>> getAdjacencyList()
+    }
+
+    class TelemetryDao implements Repository {
+        + TelemetryRecord save(TelemetryRecord r)
+        + int saveBatch(List<TelemetryRecord> list)
+    }
+
+    class RiskConfigDao implements Repository {
+        + RiskConfig save(RiskConfig c)
+        + Optional<RiskConfig> findByAssetName(String name)
+    }
+
+    class UserDao implements Repository {
+        + User save(User u)
+        + Optional<User> findByUsername(String username)
+    }
+
+    class AuditReportDao implements Repository {
+        + AuditReport save(AuditReport r)
+    }
+}
+
+package "service" {
+    class Team6_AlertManagement {
+        - AlertDao alertDao
+        + Alert ap25110090004_AlertManagement_create(Alert alert)
+        + boolean ap25110090004_AlertManagement_update(Alert alert)
+        + Optional<Alert> ap25110090004_AlertManagement_retrive(int id)
+        + boolean ap25110090004_AlertManagement_delete(int id)
+        + List<Alert> filterAlerts(String q, String domain, String tech, String sev)
+        + Map<String, Long> getSeverityDistribution()
+    }
+
+    class Team6_ThreatGraph {
+        - ThreatGraphDao threatGraphDao
+        + ThreatNode ap25110090196_ThreatGraph_create(ThreatNode node)
+        + boolean ap25110090196_ThreatGraph_update(ThreatNode node)
+        + Optional<ThreatNode> ap25110090196_ThreatGraph_retrive(String id)
+        + boolean ap25110090196_ThreatGraph_delete(String id)
+        + Map<String, List<ThreatEdge>> getAdjacencyMap()
+    }
+
+    class Team6_TelemetryIngest {
+        - TelemetryDao telemetryDao
+        - ExecutorService executorService
+        + TelemetryRecord ap25110090041_TelemetryIngest_create(TelemetryRecord r)
+        + boolean ap25110090041_TelemetryIngest_update(TelemetryRecord r)
+        + Optional<TelemetryRecord> ap25110090041_TelemetryIngest_retrive(int id)
+        + boolean ap25110090041_TelemetryIngest_delete(int id)
+        + CompletableFuture<Integer> ingestCsvAsync(File csv, String domain, Consumer<Integer> progress)
+    }
+
+    class Team6_RiskRanking implements Ranker {
+        - RiskConfigDao riskConfigDao
+        + RiskConfig ap25110090149_RiskRanking_create(RiskConfig config)
+        + boolean ap25110090149_RiskRanking_update(RiskConfig config)
+        + Optional<RiskConfig> ap25110090149_RiskRanking_retrive(int id)
+        + boolean ap25110090149_RiskRanking_delete(int id)
+        + List<Alert> recalculateHeuristicRiskScores(List<Alert> alerts)
+        + List<Map<String, Object>> computeWeightSensitivity(List<Alert> alerts)
+    }
+
+    class Team6_UserReports {
+        - UserDao userDao
+        - AuditReportDao auditReportDao
+        + User ap25110090168_UserReports_create(User user)
+        + boolean ap25110090168_UserReports_update(User user)
+        + Optional<User> ap25110090168_UserReports_retrive(int id)
+        + boolean ap25110090168_UserReports_delete(int id)
+        + User authenticate(String user, String pass)
+        + File exportAlertsToCsv(List<Alert> alerts, File target, String user)
+    }
+}
+
+Team6_AlertManagement --> AlertDao
+Team6_ThreatGraph --> ThreatGraphDao
+Team6_TelemetryIngest --> TelemetryDao
+Team6_RiskRanking --> RiskConfigDao
+Team6_UserReports --> UserDao
+Team6_UserReports --> AuditReportDao
+
+@enduml
+

@@ -1,0 +1,6 @@
+held_out_unseen_attack,model,binary_accuracy,unseen_attack_recall,f1_score,false_positive_rate,experiment
+DoS,Random Forest (Zero-Day Anomaly),1.0,1.0,1.0,0.0,Leave_One_Attack_Out
+GAS,Random Forest (Zero-Day Anomaly),1.0,1.0,1.0,0.0,Leave_One_Attack_Out
+RPM,Random Forest (Zero-Day Anomaly),1.0,1.0,1.0,0.0,Leave_One_Attack_Out
+SPEED,Random Forest (Zero-Day Anomaly),1.0,1.0,1.0,0.0,Leave_One_Attack_Out
+STEERING_WHEEL,Random Forest (Zero-Day Anomaly),1.0,1.0,1.0,0.0,Leave_One_Attack_Out

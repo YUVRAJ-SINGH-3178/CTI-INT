@@ -1,0 +1,65 @@
+@startuml
+skinparam roundcorner 10
+skinparam shadowing true
+
+start
+
+:Operator Launches Security Console;
+:Display Login Dialog;
+:Enter Credentials (username, password);
+
+if (Verify Salted SHA-256 Hash?) then (Valid)
+    :Grant Role Access (ADMIN / ANALYST);
+    :Initialize Main Dashboard;
+else (Invalid)
+    :Display Authentication Error;
+    stop
+endif
+
+fork
+    :User Selects "Stream Telemetry";
+    :Dispatch SwingWorker Background Thread;
+    :Read CAN/V2X CSV Frames;
+    :Execute Batch Transaction in SQLite;
+    :Update JProgressBar (No UI Freeze);
+fork again
+    :Monitor Ingested Intrusion Alerts;
+    :Apply Filter (Keyword, Domain, Technique, Severity);
+    :Java Streams Query Execution;
+    :Render Table Sorted by Risk Score;
+end fork
+
+:Operator Selects Target Alert;
+:Extract Mapped MITRE ATT&CK Technique (e.g. T0814);
+:Lookup Associated CWE Weakness (e.g. CWE-400);
+:Resolve Target Vehicle Assets (e.g. Braking ECU);
+
+:Execute Heuristic Risk Scoring;
+note right
+  Criticality x Impact Weight x Probability
+  Polymorphic Domain Adjustment
+end note
+
+if (Operator Action?) then (Edit Alert)
+    :Open AlertFormDialog;
+    :Validate Modifications;
+    :Execute PreparedStatement UPDATE;
+else if (Delete Alert)
+    :Show Confirmation Dialog;
+    if (Confirmed?) then (Yes)
+        :Execute PreparedStatement DELETE;
+        :Remove Row from Database;
+    else (No)
+        :Cancel Deletion;
+    endif
+else if (Export CSV)
+    :Open JFileChooser;
+    :Write Formatted CSV File;
+    :Insert Audit Log in audit_reports;
+endif
+
+:Refresh Table & Detail Breakdown Panel;
+
+stop
+@enduml
+

@@ -1,0 +1,26 @@
+# Compiled Java Bytecode
+bin/
+*.class
+
+# Temporary and Log files
+*.log
+*.tmp
+temp/
+sources.txt
+
+# OS Specific
+Thumbs.db
+.DS_Store
+
+# IDE Specific
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# Retain pre-seeded SQLite database, ignore locks/wal
+*.db-wal
+*.db-shm
+

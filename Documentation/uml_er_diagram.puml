@@ -1,0 +1,87 @@
+@startuml
+skinparam roundcorner 10
+skinparam shadowing true
+
+entity "users" as users {
+    * user_id : INTEGER <<PK, AUTOINCREMENT>>
+    --
+    * username : TEXT <<UNIQUE, NOT NULL>>
+    * password_hash : TEXT <<NOT NULL>>
+    * salt : TEXT <<NOT NULL>>
+    * full_name : TEXT <<NOT NULL>>
+    * role : TEXT <<CHECK: ADMIN, ANALYST, OPERATOR>>
+    * created_at : TEXT <<NOT NULL>>
+}
+
+entity "audit_reports" as audit_reports {
+    * report_id : INTEGER <<PK, AUTOINCREMENT>>
+    --
+    * report_title : TEXT <<NOT NULL>>
+    * exported_by : TEXT <<NOT NULL>>
+    * file_path : TEXT <<NOT NULL>>
+    * record_count : INTEGER <<NOT NULL, >= 0>>
+    * generated_at : TEXT <<NOT NULL>>
+}
+
+entity "threat_nodes" as threat_nodes {
+    * node_id : TEXT <<PK>>
+    --
+    * node_name : TEXT <<NOT NULL>>
+    * node_type : TEXT <<CHECK: Asset, Technique, Weakness, Event>>
+    description : TEXT
+    * criticality : REAL <<DEFAULT 1.0, >= 0.0>>
+}
+
+entity "threat_edges" as threat_edges {
+    * edge_id : INTEGER <<PK, AUTOINCREMENT>>
+    --
+    * source_node : TEXT <<FK -> threat_nodes.node_id>>
+    * target_node : TEXT <<FK -> threat_nodes.node_id>>
+    * relation_type : TEXT <<NOT NULL>>
+    * weight : REAL <<DEFAULT 1.0, > 0.0>>
+}
+
+entity "telemetry_records" as telemetry_records {
+    * record_id : INTEGER <<PK, AUTOINCREMENT>>
+    --
+    * domain : TEXT <<CHECK: CAN, V2X>>
+    * timestamp : REAL <<NOT NULL>>
+    * source_id : TEXT <<NOT NULL>>
+    * payload_data : TEXT <<NOT NULL>>
+    * status_flag : TEXT <<DEFAULT 'INGESTED'>>
+    * ingested_at : TEXT <<NOT NULL>>
+}
+
+entity "risk_configurations" as risk_configurations {
+    * config_id : INTEGER <<PK, AUTOINCREMENT>>
+    --
+    * asset_name : TEXT <<UNIQUE, NOT NULL>>
+    * criticality_factor : REAL <<NOT NULL, >= 0.0>>
+    * impact_weight : REAL <<NOT NULL, >= 0.0>>
+    * baseline_threshold : REAL <<NOT NULL, >= 0.0>>
+    * updated_at : TEXT <<NOT NULL>>
+}
+
+entity "alerts" as alerts {
+    * alert_id : INTEGER <<PK, AUTOINCREMENT>>
+    --
+    * sample_id : INTEGER <<NOT NULL>>
+    * domain : TEXT <<CHECK: CAN, V2X>>
+    * attack_type : TEXT <<NOT NULL>>
+    * confidence : REAL <<CHECK: 0.0 <= conf <= 1.0>>
+    * risk_score : REAL <<CHECK: >= 0.0>>
+    * mitre_technique : TEXT <<NOT NULL>>
+    * technique_name : TEXT <<NOT NULL>>
+    * severity : TEXT <<CHECK: CRITICAL, HIGH, MEDIUM, LOW>>
+    * target_assets : TEXT <<NOT NULL>>
+    * cwe_id : TEXT <<NOT NULL>>
+    * timestamp : TEXT <<NOT NULL>>
+    * status : TEXT <<DEFAULT 'NEW'>>
+}
+
+threat_nodes ||--o{ threat_edges : "source_node"
+threat_nodes ||--o{ threat_edges : "target_node"
+users ||--o{ audit_reports : "exported_by"
+
+@enduml
+

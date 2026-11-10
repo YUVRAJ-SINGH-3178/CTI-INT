@@ -1,0 +1,474 @@
+{
+  "directed": true,
+  "multigraph": false,
+  "graph": {
+    "name": "CTI_Vehicle_Threat_Graph"
+  },
+  "nodes": [
+    {
+      "type": "vehicle_asset",
+      "category": "Network",
+      "criticality": 10.0,
+      "label": "CAN Bus\n(High-Speed)",
+      "id": "Asset:CAN_Bus"
+    },
+    {
+      "type": "vehicle_asset",
+      "category": "Powertrain",
+      "criticality": 9.5,
+      "label": "Engine Control\nModule (ECM)",
+      "id": "Asset:ECM"
+    },
+    {
+      "type": "vehicle_asset",
+      "category": "Actuator",
+      "criticality": 9.2,
+      "label": "Electronic Throttle\nControl (ETC)",
+      "id": "Asset:ETC"
+    },
+    {
+      "type": "vehicle_asset",
+      "category": "Powertrain",
+      "criticality": 8.0,
+      "label": "Transmission\nModule (TCM)",
+      "id": "Asset:TCM"
+    },
+    {
+      "type": "vehicle_asset",
+      "category": "Safety",
+      "criticality": 9.0,
+      "label": "ABS & ESC\nBraking Module",
+      "id": "Asset:ABS_ESC"
+    },
+    {
+      "type": "vehicle_asset",
+      "category": "Safety",
+      "criticality": 9.8,
+      "label": "Electric Power\nSteering (EPS)",
+      "id": "Asset:EPS"
+    },
+    {
+      "type": "vehicle_asset",
+      "category": "Telematics",
+      "criticality": 8.8,
+      "label": "On-Board Unit\n(OBU V2X)",
+      "id": "Asset:OBU_V2X"
+    },
+    {
+      "type": "vehicle_asset",
+      "category": "Sensor",
+      "criticality": 8.2,
+      "label": "GNSS/GPS\nPosition Unit",
+      "id": "Asset:GNSS_GPS"
+    },
+    {
+      "type": "vehicle_asset",
+      "category": "ADAS",
+      "criticality": 9.4,
+      "label": "ADAS Safety Apps\n(FCW / CACC)",
+      "id": "Asset:FCW_CACC"
+    },
+    {
+      "type": "vulnerability",
+      "cwe": "CWE-306",
+      "severity": 9.5,
+      "label": "CWE-306:\nMissing Auth on CAN",
+      "id": "Vuln:CWE-306"
+    },
+    {
+      "type": "vulnerability",
+      "cwe": "CWE-345",
+      "severity": 8.5,
+      "label": "CWE-345:\nInsufficient Data Authenticity",
+      "id": "Vuln:CWE-345"
+    },
+    {
+      "type": "vulnerability",
+      "cwe": "CWE-400",
+      "severity": 9.0,
+      "label": "CWE-400:\nUncontrolled Resource Exhaustion",
+      "id": "Vuln:CWE-400"
+    },
+    {
+      "type": "vulnerability",
+      "cwe": "CWE-399",
+      "severity": 7.5,
+      "label": "CWE-399:\nResource Table Mismanagement",
+      "id": "Vuln:CWE-399"
+    },
+    {
+      "type": "attack_technique",
+      "mitre_id": "T0814",
+      "name": "Denial of Service",
+      "label": "T0814:\nDenial of Service",
+      "id": "Tech:T0814"
+    },
+    {
+      "type": "attack_technique",
+      "mitre_id": "T0855",
+      "name": "Unauthorized Command",
+      "label": "T0855:\nUnauthorized Command",
+      "id": "Tech:T0855"
+    },
+    {
+      "type": "attack_technique",
+      "mitre_id": "T0856",
+      "name": "Spoof Reporting Msg",
+      "label": "T0856:\nSpoof Reporting Message",
+      "id": "Tech:T0856"
+    },
+    {
+      "type": "attack_technique",
+      "mitre_id": "T0831",
+      "name": "Manipulation of Control",
+      "label": "T0831:\nManipulation of Control",
+      "id": "Tech:T0831"
+    },
+    {
+      "type": "attack_technique",
+      "mitre_id": "T1565.002",
+      "name": "Transmitted Data Manip",
+      "label": "T1565.002:\nTransmitted Data Manip",
+      "id": "Tech:T1565.002"
+    },
+    {
+      "type": "attack_technique",
+      "mitre_id": "T1498",
+      "name": "Network Denial of Service",
+      "label": "T1498:\nNetwork DoS",
+      "id": "Tech:T1498"
+    },
+    {
+      "type": "comm_event",
+      "domain": "CAN",
+      "label": "Event:\nCAN DoS Flood (ID 291)",
+      "id": "Event:CAN_DoS_Flood"
+    },
+    {
+      "type": "comm_event",
+      "domain": "CAN",
+      "label": "Event:\nCAN Throttle Injection (ID 513)",
+      "id": "Event:CAN_GAS_Injection"
+    },
+    {
+      "type": "comm_event",
+      "domain": "CAN",
+      "label": "Event:\nCAN RPM Spoofing (ID 476)",
+      "id": "Event:CAN_RPM_Injection"
+    },
+    {
+      "type": "comm_event",
+      "domain": "CAN",
+      "label": "Event:\nCAN Speed Spoofing (ID 344)",
+      "id": "Event:CAN_SPEED_Injection"
+    },
+    {
+      "type": "comm_event",
+      "domain": "CAN",
+      "label": "Event:\nCAN Steering Angle (ID 128)",
+      "id": "Event:CAN_STEERING_Injection"
+    },
+    {
+      "type": "comm_event",
+      "domain": "V2X",
+      "label": "Event:\nV2X Const Pos BSM",
+      "id": "Event:V2X_Const_Pos"
+    },
+    {
+      "type": "comm_event",
+      "domain": "V2X",
+      "label": "Event:\nV2X Offset Pos BSM",
+      "id": "Event:V2X_Pos_Offset"
+    },
+    {
+      "type": "comm_event",
+      "domain": "V2X",
+      "label": "Event:\nV2X Random Pos Flood",
+      "id": "Event:V2X_Random_Pos"
+    },
+    {
+      "type": "comm_event",
+      "domain": "V2X",
+      "label": "Event:\nV2X Ghost Stop BSM",
+      "id": "Event:V2X_Eventual_Stop"
+    }
+  ],
+  "edges": [
+    {
+      "relation": "CONNECTS_TO",
+      "weight": 1.0,
+      "source": "Asset:CAN_Bus",
+      "target": "Asset:ECM"
+    },
+    {
+      "relation": "CONNECTS_TO",
+      "weight": 1.0,
+      "source": "Asset:CAN_Bus",
+      "target": "Asset:TCM"
+    },
+    {
+      "relation": "CONNECTS_TO",
+      "weight": 1.0,
+      "source": "Asset:CAN_Bus",
+      "target": "Asset:ABS_ESC"
+    },
+    {
+      "relation": "CONNECTS_TO",
+      "weight": 1.0,
+      "source": "Asset:CAN_Bus",
+      "target": "Asset:EPS"
+    },
+    {
+      "relation": "GATEWAY_BRIDGED",
+      "weight": 0.8,
+      "source": "Asset:CAN_Bus",
+      "target": "Asset:OBU_V2X"
+    },
+    {
+      "relation": "CONTROLS",
+      "weight": 1.0,
+      "source": "Asset:ECM",
+      "target": "Asset:ETC"
+    },
+    {
+      "relation": "PROVIDES_BSM",
+      "weight": 1.0,
+      "source": "Asset:OBU_V2X",
+      "target": "Asset:FCW_CACC"
+    },
+    {
+      "relation": "FEEDS_TELEMETRY",
+      "weight": 1.0,
+      "source": "Asset:GNSS_GPS",
+      "target": "Asset:OBU_V2X"
+    },
+    {
+      "relation": "AFFECTS",
+      "weight": 1.0,
+      "source": "Vuln:CWE-306",
+      "target": "Asset:CAN_Bus"
+    },
+    {
+      "relation": "AFFECTS",
+      "weight": 0.9,
+      "source": "Vuln:CWE-345",
+      "target": "Asset:OBU_V2X"
+    },
+    {
+      "relation": "AFFECTS",
+      "weight": 0.8,
+      "source": "Vuln:CWE-345",
+      "target": "Asset:ECM"
+    },
+    {
+      "relation": "AFFECTS",
+      "weight": 0.8,
+      "source": "Vuln:CWE-345",
+      "target": "Asset:ABS_ESC"
+    },
+    {
+      "relation": "AFFECTS",
+      "weight": 1.0,
+      "source": "Vuln:CWE-400",
+      "target": "Asset:CAN_Bus"
+    },
+    {
+      "relation": "AFFECTS",
+      "weight": 0.7,
+      "source": "Vuln:CWE-399",
+      "target": "Asset:OBU_V2X"
+    },
+    {
+      "relation": "EXPLOITS",
+      "weight": 1.0,
+      "source": "Tech:T0814",
+      "target": "Vuln:CWE-400"
+    },
+    {
+      "relation": "TARGETS",
+      "weight": 1.0,
+      "source": "Tech:T0814",
+      "target": "Asset:CAN_Bus"
+    },
+    {
+      "relation": "MANIFESTS_AS",
+      "weight": 1.0,
+      "source": "Tech:T0814",
+      "target": "Event:CAN_DoS_Flood"
+    },
+    {
+      "relation": "EXPLOITS",
+      "weight": 1.0,
+      "source": "Tech:T0855",
+      "target": "Vuln:CWE-306"
+    },
+    {
+      "relation": "TARGETS",
+      "weight": 0.95,
+      "source": "Tech:T0855",
+      "target": "Asset:ECM"
+    },
+    {
+      "relation": "MANIFESTS_AS",
+      "weight": 1.0,
+      "source": "Tech:T0855",
+      "target": "Event:CAN_GAS_Injection"
+    },
+    {
+      "relation": "EXPLOITS",
+      "weight": 1.0,
+      "source": "Tech:T0856",
+      "target": "Vuln:CWE-345"
+    },
+    {
+      "relation": "TARGETS",
+      "weight": 0.85,
+      "source": "Tech:T0856",
+      "target": "Asset:TCM"
+    },
+    {
+      "relation": "TARGETS",
+      "weight": 0.9,
+      "source": "Tech:T0856",
+      "target": "Asset:ABS_ESC"
+    },
+    {
+      "relation": "TARGETS",
+      "weight": 0.85,
+      "source": "Tech:T0856",
+      "target": "Asset:OBU_V2X"
+    },
+    {
+      "relation": "MANIFESTS_AS",
+      "weight": 0.9,
+      "source": "Tech:T0856",
+      "target": "Event:CAN_RPM_Injection"
+    },
+    {
+      "relation": "MANIFESTS_AS",
+      "weight": 0.9,
+      "source": "Tech:T0856",
+      "target": "Event:CAN_SPEED_Injection"
+    },
+    {
+      "relation": "MANIFESTS_AS",
+      "weight": 0.85,
+      "source": "Tech:T0856",
+      "target": "Event:V2X_Const_Pos"
+    },
+    {
+      "relation": "MANIFESTS_AS",
+      "weight": 0.9,
+      "source": "Tech:T0856",
+      "target": "Event:V2X_Eventual_Stop"
+    },
+    {
+      "relation": "EXPLOITS",
+      "weight": 1.0,
+      "source": "Tech:T0831",
+      "target": "Vuln:CWE-306"
+    },
+    {
+      "relation": "TARGETS",
+      "weight": 1.0,
+      "source": "Tech:T0831",
+      "target": "Asset:EPS"
+    },
+    {
+      "relation": "MANIFESTS_AS",
+      "weight": 1.0,
+      "source": "Tech:T0831",
+      "target": "Event:CAN_STEERING_Injection"
+    },
+    {
+      "relation": "EXPLOITS",
+      "weight": 1.0,
+      "source": "Tech:T1565.002",
+      "target": "Vuln:CWE-345"
+    },
+    {
+      "relation": "TARGETS",
+      "weight": 0.9,
+      "source": "Tech:T1565.002",
+      "target": "Asset:FCW_CACC"
+    },
+    {
+      "relation": "MANIFESTS_AS",
+      "weight": 0.9,
+      "source": "Tech:T1565.002",
+      "target": "Event:V2X_Pos_Offset"
+    },
+    {
+      "relation": "EXPLOITS",
+      "weight": 1.0,
+      "source": "Tech:T1498",
+      "target": "Vuln:CWE-399"
+    },
+    {
+      "relation": "TARGETS",
+      "weight": 0.85,
+      "source": "Tech:T1498",
+      "target": "Asset:OBU_V2X"
+    },
+    {
+      "relation": "MANIFESTS_AS",
+      "weight": 0.85,
+      "source": "Tech:T1498",
+      "target": "Event:V2X_Random_Pos"
+    },
+    {
+      "relation": "SATURATES",
+      "weight": 1.0,
+      "source": "Event:CAN_DoS_Flood",
+      "target": "Asset:CAN_Bus"
+    },
+    {
+      "relation": "CORRUPTS_INPUT",
+      "weight": 1.0,
+      "source": "Event:CAN_GAS_Injection",
+      "target": "Asset:ECM"
+    },
+    {
+      "relation": "CORRUPTS_INPUT",
+      "weight": 0.9,
+      "source": "Event:CAN_RPM_Injection",
+      "target": "Asset:TCM"
+    },
+    {
+      "relation": "CORRUPTS_INPUT",
+      "weight": 0.9,
+      "source": "Event:CAN_SPEED_Injection",
+      "target": "Asset:ABS_ESC"
+    },
+    {
+      "relation": "CORRUPTS_INPUT",
+      "weight": 1.0,
+      "source": "Event:CAN_STEERING_Injection",
+      "target": "Asset:EPS"
+    },
+    {
+      "relation": "RECEIVED_BY",
+      "weight": 0.9,
+      "source": "Event:V2X_Const_Pos",
+      "target": "Asset:OBU_V2X"
+    },
+    {
+      "relation": "DECEIVES",
+      "weight": 0.95,
+      "source": "Event:V2X_Pos_Offset",
+      "target": "Asset:FCW_CACC"
+    },
+    {
+      "relation": "SATURATES_TABLE",
+      "weight": 0.85,
+      "source": "Event:V2X_Random_Pos",
+      "target": "Asset:OBU_V2X"
+    },
+    {
+      "relation": "TRIGGERS_FALSE_BRAKE",
+      "weight": 1.0,
+      "source": "Event:V2X_Eventual_Stop",
+      "target": "Asset:FCW_CACC"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+Test ID,Scenario / Input,Expected Result,Actual Result,Status
+TC-01,"Create valid CanAlert with physical CAN ID","Alert persisted with positive generated alert_id","Persisted alert_id=1",PASS
+TC-02,"Create alert with empty attack type","Throw ValidationException for missing attack type","Caught: Validation error on field 'attackType': Attack type cannot be null or empty",PASS
+TC-03,"Create alert with invalid confidence 1.85 (>1.0)","Throw ValidationException for confidence out of range","Caught: Validation error on field 'confidence': Confidence probability must be between 0.0 and 1.0. Given: 1.85",PASS
+TC-04,"Retrieve existing alert by primary key ID=1","Returns Optional containing Alert entity with ID 1","Found alert: DoS_Injection",PASS
+TC-05,"Update alert status to 'RESOLVED'","Update returns true; retrieved entity reflects modified status","Updated=true, Status=RESOLVED",PASS
+TC-06,"Delete alert by primary key ID","Delete returns true; subsequent findById returns Optional.empty()","Deleted=true, Present=false",PASS
+TC-07,"Search alerts with keyword 'DoS'","Returns non-empty list filtered strictly to DoS attacks","Matched 1 alerts",PASS
+TC-08,"Insert duplicate node with existing primary key","Throw DataAccessException / SQLite UNIQUE constraint violation","Caught: Error inserting threat node ID node_test_dup: [SQLITE_CONSTRAINT_PRIMARYKEY] A PRIMARY KEY constraint failed (UNIQUE constraint failed: threat_nodes.node_id)",PASS
+TC-09,"Authenticate valid user 'admin' with correct password","Returns User object with role 'ADMIN'","Authenticated: admin (ADMIN)",PASS
+TC-10,"Authenticate 'admin' with incorrect password","Throw AuthenticationException","Caught: Invalid password. Authentication failed.",PASS
+TC-11,"Parse malformed CSV row with unclosed quote","Gracefully recovers and outputs tokenized strings without crash","Parsed 3 tokens safely",PASS
+TC-12,"Rank alerts list by heuristic risk score via Java Streams","List sorted strictly in descending risk score order","Strictly descending: true (Top: 19.0)",PASS
+TC-13,"Threat graph node create, retrieve and delete","Node persisted, retrieved with criticality=4.0, and deleted","Retrieved name=Test Gateway",PASS
+TC-14,"Threat graph relational verification (28 nodes, 46 edges)","Seeded database contains exactly 28 nodes and 46 edges with adjacency map","Nodes=28, Edges=46, Adjacency buckets=28",PASS
+TC-15,"Telemetry record create & retrieve by primary key","Record persisted with generated ID and source_id=0x128","Persisted record_id=1",PASS
+TC-16,"Heuristic weight sensitivity perturbation sweeps (-30% to +30%)","Computes 7 sensitivity perturbation evaluation tiers","Computed 7 sensitivity tiers",PASS
+TC-17,"Export visible alerts to CSV and record audit trail","CSV file created with header and at least one data row, plus audit log entry","CSV rows=2 (Header + 1 data rows), Audit records=1",PASS
+TC-18,"Heuristic risk score calculation (18.00) and polymorphic domain details","Both yield risk=18.00; distinct domain details and explanation strings","CAN Risk=18.0, V2X Risk=18.0, CAN Details=[CAN Arbitration ID: 0x128 (296) | DLC: 8 | Payload: 00], V2X Details=[V2X Transmitter ID: 14 | Receiver ID: 99 | Pos: (100.0, 200.0) | Velocity: 35.0 m/s]",PASS
