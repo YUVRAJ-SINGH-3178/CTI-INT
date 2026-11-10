@@ -1,11 +1,11 @@
 Test ID,Scenario / Input,Expected Result,Actual Result,Status
-TC-01,"Create valid CanAlert with physical CAN ID","Alert persisted with positive generated alert_id","Persisted alert_id=1",PASS
+TC-01,"Create valid CanAlert with physical CAN ID","Alert persisted with positive generated alert_id","Persisted alert_id=7684",PASS
 TC-02,"Create alert with empty attack type","Throw ValidationException for missing attack type","Caught: Validation error on field 'attackType': Attack type cannot be null or empty",PASS
 TC-03,"Create alert with invalid confidence 1.85 (>1.0)","Throw ValidationException for confidence out of range","Caught: Validation error on field 'confidence': Confidence probability must be between 0.0 and 1.0. Given: 1.85",PASS
-TC-04,"Retrieve existing alert by primary key ID=1","Returns Optional containing Alert entity with ID 1","Found alert: DoS_Injection",PASS
+TC-04,"Retrieve existing alert by primary key ID=1","Returns Optional containing Alert entity with ID 1","Found alert: RPM",PASS
 TC-05,"Update alert status to 'RESOLVED'","Update returns true; retrieved entity reflects modified status","Updated=true, Status=RESOLVED",PASS
 TC-06,"Delete alert by primary key ID","Delete returns true; subsequent findById returns Optional.empty()","Deleted=true, Present=false",PASS
-TC-07,"Search alerts with keyword 'DoS'","Returns non-empty list filtered strictly to DoS attacks","Matched 1 alerts",PASS
+TC-07,"Search alerts with keyword 'DoS'","Returns non-empty list filtered strictly to DoS attacks","Matched 1501 alerts",PASS
 TC-08,"Insert duplicate node with existing primary key","Throw DataAccessException / SQLite UNIQUE constraint violation","Caught: Error inserting threat node ID node_test_dup: [SQLITE_CONSTRAINT_PRIMARYKEY] A PRIMARY KEY constraint failed (UNIQUE constraint failed: threat_nodes.node_id)",PASS
 TC-09,"Authenticate valid user 'admin' with correct password","Returns User object with role 'ADMIN'","Authenticated: admin (ADMIN)",PASS
 TC-10,"Authenticate 'admin' with incorrect password","Throw AuthenticationException","Caught: Invalid password. Authentication failed.",PASS
@@ -15,5 +15,10 @@ TC-13,"Threat graph node create, retrieve and delete","Node persisted, retrieved
 TC-14,"Threat graph relational verification (28 nodes, 46 edges)","Seeded database contains exactly 28 nodes and 46 edges with adjacency map","Nodes=28, Edges=46, Adjacency buckets=28",PASS
 TC-15,"Telemetry record create & retrieve by primary key","Record persisted with generated ID and source_id=0x128","Persisted record_id=1",PASS
 TC-16,"Heuristic weight sensitivity perturbation sweeps (-30% to +30%)","Computes 7 sensitivity perturbation evaluation tiers","Computed 7 sensitivity tiers",PASS
-TC-17,"Export visible alerts to CSV and record audit trail","CSV file created with header and at least one data row, plus audit log entry","CSV rows=2 (Header + 1 data rows), Audit records=1",PASS
+TC-17,"Export visible alerts to CSV and record audit trail","CSV file created with header and at least one data row, plus audit log entry","CSV rows=7685 (Header + 7684 data rows), Audit records=1",PASS
 TC-18,"Heuristic risk score calculation (18.00) and polymorphic domain details","Both yield risk=18.00; distinct domain details and explanation strings","CAN Risk=18.0, V2X Risk=18.0, CAN Details=[CAN Arbitration ID: 0x128 (296) | DLC: 8 | Payload: 00], V2X Details=[V2X Transmitter ID: 14 | Receiver ID: 99 | Pos: (100.0, 200.0) | Velocity: 35.0 m/s]",PASS
+TC-19,"Full dataset database seeding verification (7,683 alerts)","Seeds 7,683 alerts (7,499 CAN + 184 V2X); Row 1=RPM (risk=6.18)","Total=7683 (CAN=7499, V2X=184), Row1=RPM@6.18",PASS
+TC-20,"MITRE attack-stix-data STIX 2.1 JSON extraction","Extracts ICS + Enterprise ATT&CK techniques including all 6 mapped IDs","Loaded 994 unique STIX techniques (ICS=127, Enterprise=867, all 6 verified)",PASS
+TC-21,"Full CICIoV2024 6-CSV scan (1,408,219 frames) & async ingest","Scans 6 files totaling 1,408,219 frames and ingests 200 DoS CAN frames","Files=6, TotalFrames=1408219, IngestedDoS=200",PASS
+TC-22,"VeReMi index (225 runs) & .tgz GroundTruth+BSM stream","Parses 225 runs and streams GroundTruth + Type-3 BSMs from .tgz","Runs=225, Archive=veins_maat.uc1.14505201.180205_165350.tgz (GT=959, BSM=4004)",PASS
+TC-23,"Verified research results loader (20-seed & full dataset benchmarks)","Loads 14 summary rows, 280 run rows, 4 full-CAN rows, 4 full-V2X rows","S20=14, R20=280, FullCAN=4, FullV2X=4",PASS

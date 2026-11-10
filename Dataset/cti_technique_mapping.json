@@ -1,0 +1,256 @@
+[
+  {
+    "attack_type": "DoS",
+    "network_domain": "In-Vehicle (CAN Bus)",
+    "mitre_technique_id": "T0814",
+    "secondary_technique_id": "T1498",
+    "technique_name": "Denial of Service",
+    "tactics": [
+      "Inhibit Response Function"
+    ],
+    "stix_domain": "ICS",
+    "url": "https://attack.mitre.org/techniques/T0814",
+    "justification": "Floods the CAN bus with dominant low-ID (0x000) arbitration frames to exhaust transceiver buffers and deny bus arbitration to safety-critical ECUs.",
+    "cwe_id": "CWE-400",
+    "cwe_name": "Uncontrolled Resource Consumption",
+    "affected_assets": [
+      "CAN High/Low Bus",
+      "Gateway ECU",
+      "Powertrain Bus Transceiver"
+    ],
+    "severity": "CRITICAL",
+    "impact_score": 9.5,
+    "heuristic_impact_weight": 9.5,
+    "weight_type": "author_assigned_heuristic_weight",
+    "weight_derivation_rationale": "Author-assigned heuristic weight (9.5/10.0) based on catastrophic loss of CAN bus availability for all interconnected safety ECUs; NOT derived from ISO 26262 ASIL or CVSS base metrics."
+  },
+  {
+    "attack_type": "GAS",
+    "network_domain": "In-Vehicle (CAN Bus)",
+    "mitre_technique_id": "T0855",
+    "secondary_technique_id": "T0836",
+    "technique_name": "Unauthorized Command Message",
+    "tactics": [
+      "Impair Process Control"
+    ],
+    "stix_domain": "ICS",
+    "url": "https://attack.mitre.org/techniques/T0855",
+    "justification": "Injects unauthorized throttle position frames into CAN arbitration to manipulate fuel delivery and induce unintended vehicle acceleration.",
+    "cwe_id": "CWE-306",
+    "cwe_name": "Missing Authentication for Critical Function",
+    "affected_assets": [
+      "Engine Control Module (ECM)",
+      "Electronic Throttle Control (ETC)",
+      "Accelerator Pedal Sensor"
+    ],
+    "severity": "CRITICAL",
+    "impact_score": 9.2,
+    "heuristic_impact_weight": 9.2,
+    "weight_type": "author_assigned_heuristic_weight",
+    "weight_derivation_rationale": "Author-assigned heuristic weight (9.2/10.0) reflecting severe kinetic hazard from uncommanded acceleration; NOT derived from ISO 26262 ASIL or CVSS base metrics."
+  },
+  {
+    "attack_type": "RPM",
+    "network_domain": "In-Vehicle (CAN Bus)",
+    "mitre_technique_id": "T0856",
+    "secondary_technique_id": "T0836",
+    "technique_name": "Spoof Reporting Message",
+    "tactics": [
+      "Evasion",
+      "Impair Process Control"
+    ],
+    "stix_domain": "ICS",
+    "url": "https://attack.mitre.org/techniques/T0856",
+    "justification": "Transmits falsified crankshaft/tachometer sensor messages, misleading the transmission control unit and causing erroneous gear selection or engine stalling.",
+    "cwe_id": "CWE-345",
+    "cwe_name": "Insufficient Verification of Data Authenticity",
+    "affected_assets": [
+      "Transmission Control Module (TCM)",
+      "Instrument Cluster",
+      "Crankshaft Sensor"
+    ],
+    "severity": "HIGH",
+    "impact_score": 8.0,
+    "heuristic_impact_weight": 8.0,
+    "weight_type": "author_assigned_heuristic_weight",
+    "weight_derivation_rationale": "Author-assigned heuristic weight (8.0/10.0) reflecting drivetrain disruption and tachometer telemetry spoofing; NOT derived from ISO 26262 ASIL or CVSS base metrics."
+  },
+  {
+    "attack_type": "SPEED",
+    "network_domain": "In-Vehicle (CAN Bus)",
+    "mitre_technique_id": "T0856",
+    "secondary_technique_id": "T1565.002",
+    "technique_name": "Spoof Reporting Message",
+    "tactics": [
+      "Evasion",
+      "Impair Process Control"
+    ],
+    "stix_domain": "ICS",
+    "url": "https://attack.mitre.org/techniques/T0856",
+    "justification": "Spoofs wheel-speed sensor reporting frames to corrupt speedometer feedback and deceive Anti-Lock Braking (ABS) and ESC decision logic.",
+    "cwe_id": "CWE-345",
+    "cwe_name": "Insufficient Verification of Data Authenticity",
+    "affected_assets": [
+      "Anti-Lock Braking System (ABS)",
+      "Electronic Stability Control (ESC)",
+      "Wheel Speed Sensors"
+    ],
+    "severity": "HIGH",
+    "impact_score": 8.5,
+    "heuristic_impact_weight": 8.5,
+    "weight_type": "author_assigned_heuristic_weight",
+    "weight_derivation_rationale": "Author-assigned heuristic weight (8.5/10.0) reflecting corruption of closed-loop stability and braking safety systems; NOT derived from ISO 26262 ASIL or CVSS base metrics."
+  },
+  {
+    "attack_type": "STEERING_WHEEL",
+    "network_domain": "In-Vehicle (CAN Bus)",
+    "mitre_technique_id": "T0831",
+    "secondary_technique_id": "T0855",
+    "technique_name": "Manipulation of Control",
+    "tactics": [
+      "Impact"
+    ],
+    "stix_domain": "ICS",
+    "url": "https://attack.mitre.org/techniques/T0831",
+    "justification": "Injects manipulated steering angle packets directly to the Electric Power Steering (EPS) ECU, forcing hazardous vehicle yaw deviation.",
+    "cwe_id": "CWE-306",
+    "cwe_name": "Missing Authentication for Critical Function",
+    "affected_assets": [
+      "Electric Power Steering (EPS) ECU",
+      "Steering Angle Sensor",
+      "Lane Keep Assist (LKA)"
+    ],
+    "severity": "CRITICAL",
+    "impact_score": 9.8,
+    "heuristic_impact_weight": 9.8,
+    "weight_type": "author_assigned_heuristic_weight",
+    "weight_derivation_rationale": "Author-assigned heuristic weight (9.8/10.0) reflecting immediate acute lateral control hazard leading to collision; NOT derived from ISO 26262 ASIL or CVSS base metrics."
+  },
+  {
+    "attack_type": "V2X_CONST_POS",
+    "network_domain": "V2X (DSRC / C-V2X BSM)",
+    "mitre_technique_id": "T0856",
+    "secondary_technique_id": "T1565.002",
+    "technique_name": "Spoof Reporting Message",
+    "tactics": [
+      "Evasion",
+      "Impair Process Control"
+    ],
+    "stix_domain": "ICS",
+    "url": "https://attack.mitre.org/techniques/T0856",
+    "justification": "Broadcasts invariant spatial coordinates in BSM telemetry while vehicle is in motion, freezing position tracking in cooperative collision warning.",
+    "cwe_id": "CWE-345",
+    "cwe_name": "Insufficient Verification of Data Authenticity",
+    "affected_assets": [
+      "On-Board Unit (OBU)",
+      "V2X Safety Application",
+      "Cooperative Forward Collision Warning (FCW)"
+    ],
+    "severity": "HIGH",
+    "impact_score": 8.1,
+    "heuristic_impact_weight": 8.1,
+    "weight_type": "author_assigned_heuristic_weight",
+    "weight_derivation_rationale": "Author-assigned heuristic weight (8.1/10.0) reflecting spoofed static positioning that blinds neighborhood collision avoidance; NOT derived from ISO 26262 ASIL or CVSS base metrics."
+  },
+  {
+    "attack_type": "V2X_CONST_OFFSET",
+    "network_domain": "V2X (DSRC / C-V2X BSM)",
+    "mitre_technique_id": "T1565.002",
+    "secondary_technique_id": "T0856",
+    "technique_name": "Transmitted Data Manipulation",
+    "tactics": [
+      "Impact"
+    ],
+    "stix_domain": "Enterprise",
+    "url": "https://attack.mitre.org/techniques/T1565/002",
+    "justification": "Systematically introduces a constant geometric distance vector shift to claimed coordinates, masquerading as a nearby ghost vehicle in adjacent lanes.",
+    "cwe_id": "CWE-345",
+    "cwe_name": "Insufficient Verification of Data Authenticity",
+    "affected_assets": [
+      "On-Board Unit (OBU)",
+      "Blind Spot Warning (BSW)",
+      "Cooperative Adaptive Cruise Control (CACC)"
+    ],
+    "severity": "HIGH",
+    "impact_score": 8.3,
+    "heuristic_impact_weight": 8.3,
+    "weight_type": "author_assigned_heuristic_weight",
+    "weight_derivation_rationale": "Author-assigned heuristic weight (8.3/10.0) reflecting deceptive lane intrusion causing unnecessary swerving or braking; NOT derived from ISO 26262 ASIL or CVSS base metrics."
+  },
+  {
+    "attack_type": "V2X_RANDOM_POS",
+    "network_domain": "V2X (DSRC / C-V2X BSM)",
+    "mitre_technique_id": "T1498",
+    "secondary_technique_id": "T0856",
+    "technique_name": "Network Denial of Service",
+    "tactics": [
+      "Impact"
+    ],
+    "stix_domain": "Enterprise",
+    "url": "https://attack.mitre.org/techniques/T1498",
+    "justification": "Floods the localized vehicular ad-hoc network (VANET) with randomly scattered coordinate sets, overwhelming neighborhood spatial tables.",
+    "cwe_id": "CWE-399",
+    "cwe_name": "Resource Management Errors",
+    "affected_assets": [
+      "On-Board Unit (OBU)",
+      "Local Dynamic Map (LDM)",
+      "DSRC/802.11p Transceiver"
+    ],
+    "severity": "HIGH",
+    "impact_score": 7.8,
+    "heuristic_impact_weight": 7.8,
+    "weight_type": "author_assigned_heuristic_weight",
+    "weight_derivation_rationale": "Author-assigned heuristic weight (7.8/10.0) reflecting situational awareness degradation from chaotic broadcast flooding; NOT derived from ISO 26262 ASIL or CVSS base metrics."
+  },
+  {
+    "attack_type": "V2X_RANDOM_OFFSET",
+    "network_domain": "V2X (DSRC / C-V2X BSM)",
+    "mitre_technique_id": "T1565.002",
+    "secondary_technique_id": "T0856",
+    "technique_name": "Transmitted Data Manipulation",
+    "tactics": [
+      "Impact"
+    ],
+    "stix_domain": "Enterprise",
+    "url": "https://attack.mitre.org/techniques/T1565/002",
+    "justification": "Injects pseudo-random Gaussian positional jitter into BSM telemetry to destabilize tracking Kalman filters and trigger false emergency brake actuations.",
+    "cwe_id": "CWE-345",
+    "cwe_name": "Insufficient Verification of Data Authenticity",
+    "affected_assets": [
+      "Cooperative Adaptive Cruise Control (CACC)",
+      "Emergency Electronic Brake Light (EEBL)",
+      "OBU"
+    ],
+    "severity": "HIGH",
+    "impact_score": 8.2,
+    "heuristic_impact_weight": 8.2,
+    "weight_type": "author_assigned_heuristic_weight",
+    "weight_derivation_rationale": "Author-assigned heuristic weight (8.2/10.0) reflecting tracking filter destabilization and false alerts; NOT derived from ISO 26262 ASIL or CVSS base metrics."
+  },
+  {
+    "attack_type": "V2X_EVENTUAL_STOP",
+    "network_domain": "V2X (DSRC / C-V2X BSM)",
+    "mitre_technique_id": "T0856",
+    "secondary_technique_id": "T0836",
+    "technique_name": "Spoof Reporting Message",
+    "tactics": [
+      "Evasion",
+      "Impair Process Control"
+    ],
+    "stix_domain": "ICS",
+    "url": "https://attack.mitre.org/techniques/T0856",
+    "justification": "Simulates an abrupt decay to zero velocity on high-speed expressways, manufacturing phantom traffic jams and triggering sudden chain-reaction braking.",
+    "cwe_id": "CWE-345",
+    "cwe_name": "Insufficient Verification of Data Authenticity",
+    "affected_assets": [
+      "Cooperative Collision Avoidance",
+      "Autonomous Emergency Braking (AEB)",
+      "OBU Telemetry Engine"
+    ],
+    "severity": "CRITICAL",
+    "impact_score": 9.0,
+    "heuristic_impact_weight": 9.0,
+    "weight_type": "author_assigned_heuristic_weight",
+    "weight_derivation_rationale": "Author-assigned heuristic weight (9.0/10.0) reflecting severe rear-end pile-up risk caused by fabricated emergency stop telemetries; NOT derived from ISO 26262 ASIL or CVSS base metrics."
+  }
+]

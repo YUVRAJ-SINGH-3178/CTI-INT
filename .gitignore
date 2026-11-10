@@ -24,3 +24,12 @@ Thumbs.db
 *.db-wal
 *.db-shm
 
+# Large raw external benchmark archives (>8 GB locally, kept out of GitHub repo)
+CICIoV2024/
+VeReMi/
+attack-stix-data/
+Dataset/CICIoV2024/
+Dataset/VeReMi/
+*.zip
+
+

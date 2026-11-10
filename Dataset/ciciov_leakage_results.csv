@@ -1,0 +1,9 @@
+accuracy,precision_macro,recall_macro,f1_macro,false_positive_rate,model,experiment
+1.0,1.0,1.0,1.0,0.0,KNN,Deduplicated_Evaluation
+1.0,1.0,1.0,1.0,0.0,Random Forest,Deduplicated_Evaluation
+1.0,1.0,1.0,1.0,0.0,SVM,Deduplicated_Evaluation
+1.0,1.0,1.0,1.0,0.0,XGBoost,Deduplicated_Evaluation
+0.999777753083676,0.9997779258272264,0.9997777777777778,0.9997777036542881,0.0,KNN,Contiguous_Time_Block_Split
+1.0,1.0,1.0,1.0,0.0,Random Forest,Contiguous_Time_Block_Split
+0.9982220246694077,0.998240985048373,0.9982222222222221,0.9982221716528826,0.0,SVM,Contiguous_Time_Block_Split
+1.0,1.0,1.0,1.0,0.0,XGBoost,Contiguous_Time_Block_Split

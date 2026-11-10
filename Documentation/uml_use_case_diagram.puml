@@ -6,48 +6,39 @@ skinparam shadowing true
 
 actor "Security Analyst" as Analyst
 actor "SOC Administrator" as Admin
-actor "Connected Vehicle (CAN/V2X)" as Vehicle
+actor "Vehicle Telemetry Sources\n(CICIoV2024 & VeReMi)" as Telemetry
 
-rectangle "Connected Vehicle CTI Security Operations Console" {
+rectangle "Connected Vehicle CTI Operations Console (Java AWT)" {
     usecase "Authenticate & Login (Salted SHA-256)" as UC_Login
-    usecase "View Risk-Ranked Alerts Dashboard" as UC_ViewAlerts
-    usecase "Filter Alerts (Domain, Technique, Severity)" as UC_Filter
-    usecase "Search Threats by Keyword" as UC_Search
-    usecase "Inspect Heuristic Risk Breakdown" as UC_Detail
+    usecase "View 7,683 Ranked Alerts" as UC_ViewAlerts
+    usecase "Filter Alerts (Keyword, Domain, ATT&CK, Severity)" as UC_Filter
+    usecase "Inspect STIX 2.1 & Heuristic Risk Breakdown" as UC_Detail
     usecase "Create / Update Intrusion Alert" as UC_AlertCRUD
     usecase "Delete Alert (Confirmation Required)" as UC_DeleteAlert
-    usecase "Explore Vehicle-Threat Graph (28 Nodes)" as UC_Graph
-    usecase "Stream CAN / V2X Telemetry (Background Threads)" as UC_Telemetry
+    usecase "Explore Threat Graph (28 Nodes, 46 Edges)" as UC_Graph
+    usecase "Async Ingest CICIoV2024 CSVs & VeReMi .tgz" as UC_Telemetry
     usecase "Recalculate Heuristic Risk Scores" as UC_RecalcRisk
-    usecase "Export Visible Alerts to CSV" as UC_ExportCSV
-    usecase "Audit Log Generation" as UC_Audit
-    usecase "Manage User Accounts & Roles" as UC_ManageUsers
-    usecase "Inspect 5-Seed Research Benchmarks" as UC_Benchmarks
-    usecase "Reseed / Maintain Database" as UC_Reseed
+    usecase "Export Visible Alerts CSV & Audit Trail" as UC_ExportCSV
+    usecase "Inspect 20-Seed & Full Benchmarks (Real CSVs)" as UC_Benchmarks
+    usecase "Audit MITRE attack-stix-data Catalog" as UC_Stix
 }
 
 Analyst --> UC_Login
 Analyst --> UC_ViewAlerts
 Analyst --> UC_Filter
-Analyst --> UC_Search
 Analyst --> UC_Detail
 Analyst --> UC_AlertCRUD
 Analyst --> UC_DeleteAlert
 Analyst --> UC_Graph
 Analyst --> UC_Telemetry
-Analyst --> UC_RecalcRisk
 Analyst --> UC_ExportCSV
 Analyst --> UC_Benchmarks
+Analyst --> UC_Stix
 
 Admin --|> Analyst
-Admin --> UC_ManageUsers
-Admin --> UC_Reseed
+Telemetry --> UC_Telemetry
 
-Vehicle --> UC_Telemetry
-
-UC_ExportCSV ..> UC_Audit : <<includes>>
-UC_AlertCRUD ..> UC_RecalcRisk : <<extends>>
+UC_AlertCRUD ..> UC_RecalcRisk : <<includes>>
 UC_DeleteAlert ..> UC_ViewAlerts : <<updates>>
 
 @enduml
-

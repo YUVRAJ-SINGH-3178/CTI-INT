@@ -1,0 +1,136 @@
+{
+  "v2x_veremi": {
+    "paired_f1_gnn_across_seeds": [
+      0.3491,
+      0.3717,
+      0.2862,
+      0.3008,
+      0.3779
+    ],
+    "paired_f1_ab_across_seeds": [
+      0.3067,
+      0.3153,
+      0.3118,
+      0.3199,
+      0.2689
+    ],
+    "paired_ttest_f1": {
+      "t_stat": 1.3009,
+      "p_value": 0.26317
+    },
+    "wilcoxon_f1": {
+      "stat": 3.0,
+      "p_value": 0.3125
+    },
+    "paired_fpr_gnn_across_seeds": [
+      0.0428,
+      0.0535,
+      0.0291,
+      0.0293,
+      0.0458
+    ],
+    "paired_fpr_ab_across_seeds": [
+      0.0422,
+      0.0324,
+      0.0461,
+      0.034,
+      0.0207
+    ],
+    "paired_ttest_fpr": {
+      "t_stat": 0.6337,
+      "p_value": 0.56068
+    },
+    "wilcoxon_fpr": {
+      "stat": 5.0,
+      "p_value": 0.625
+    },
+    "test_set_mcnemar_and_bootstrap": {
+      "mcnemar_contingency_table": {
+        "both_correct": 7606,
+        "gnn_correct_ab_wrong (b)": 168,
+        "gnn_wrong_ab_correct (c)": 61,
+        "both_wrong": 2165
+      },
+      "mcnemar_chi2_stat": 49.0655,
+      "mcnemar_p_value": 0.0,
+      "bootstrap_fpr_difference_mean": 0.00055,
+      "bootstrap_fpr_ci_95": [
+        -0.00171,
+        0.00262
+      ],
+      "bootstrap_fpr_p_value": 0.662,
+      "bootstrap_f1_difference_mean": 0.04239,
+      "bootstrap_f1_ci_95": [
+        0.033,
+        0.05188
+      ]
+    }
+  },
+  "can_ciciov2024": {
+    "paired_f1_gnn_across_seeds": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "paired_f1_ab_across_seeds": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "paired_ttest_f1": {
+      "t_stat": NaN,
+      "p_value": NaN
+    },
+    "wilcoxon_f1": {
+      "stat": 0.0,
+      "p_value": 1.0
+    },
+    "paired_fpr_gnn_across_seeds": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "paired_fpr_ab_across_seeds": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "paired_ttest_fpr": {
+      "t_stat": NaN,
+      "p_value": NaN
+    },
+    "wilcoxon_fpr": {
+      "stat": 0.0,
+      "p_value": 1.0
+    },
+    "test_set_mcnemar_and_bootstrap": {
+      "mcnemar_contingency_table": {
+        "both_correct": 8999,
+        "gnn_correct_ab_wrong (b)": 0,
+        "gnn_wrong_ab_correct (c)": 0,
+        "both_wrong": 0
+      },
+      "mcnemar_chi2_stat": 0.0,
+      "mcnemar_p_value": 1.0,
+      "bootstrap_fpr_difference_mean": 0.0,
+      "bootstrap_fpr_ci_95": [
+        0.0,
+        0.0
+      ],
+      "bootstrap_fpr_p_value": 1.0,
+      "bootstrap_f1_difference_mean": 0.0,
+      "bootstrap_f1_ci_95": [
+        0.0,
+        0.0
+      ]
+    }
+  }
+}

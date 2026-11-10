@@ -4,62 +4,50 @@ skinparam shadowing true
 
 start
 
-:Operator Launches Security Console;
-:Display Login Dialog;
+:Operator Launches Java AWT Console;
+:Display AwtLoginFrame;
 :Enter Credentials (username, password);
 
 if (Verify Salted SHA-256 Hash?) then (Valid)
-    :Grant Role Access (ADMIN / ANALYST);
-    :Initialize Main Dashboard;
+    :Grant Role Access (ADMIN / ANALYST / OPERATOR);
+    :Initialize AwtDashboardFrame (CardLayout);
 else (Invalid)
-    :Display Authentication Error;
+    :Display Authentication Error Label;
     stop
 endif
 
 fork
-    :User Selects "Stream Telemetry";
-    :Dispatch SwingWorker Background Thread;
-    :Read CAN/V2X CSV Frames;
-    :Execute Batch Transaction in SQLite;
-    :Update JProgressBar (No UI Freeze);
+    :User Starts Async CICIoV2024 / VeReMi Stream;
+    :Dispatch Task to ExecutorService Thread Pool;
+    :Parse CICIoV2024 CSV / VeReMi .tgz Packets;
+    :Execute SQLite Batch Transaction (setAutoCommit false);
+    :Post Progress to EDT via EventQueue.invokeLater();
 fork again
-    :Monitor Ingested Intrusion Alerts;
-    :Apply Filter (Keyword, Domain, Technique, Severity);
-    :Java Streams Query Execution;
-    :Render Table Sorted by Risk Score;
+    :Monitor 7,683 Real Alerts;
+    :Filter via Java Streams (Keyword, Domain, ATT&CK, Severity);
+    :Sort Descending by Heuristic Risk Score;
 end fork
 
-:Operator Selects Target Alert;
-:Extract Mapped MITRE ATT&CK Technique (e.g. T0814);
-:Lookup Associated CWE Weakness (e.g. CWE-400);
-:Resolve Target Vehicle Assets (e.g. Braking ECU);
-
-:Execute Heuristic Risk Scoring;
-note right
-  Criticality x Impact Weight x Probability
-  Polymorphic Domain Adjustment
-end note
+:Operator Selects Alert Row;
+:Lookup ATT&CK Technique in attack-stix-data (STIX 2.1);
+:Display CWE Weakness, Target ECU Assets & Risk Formula;
 
 if (Operator Action?) then (Edit Alert)
-    :Open AlertFormDialog;
-    :Validate Modifications;
-    :Execute PreparedStatement UPDATE;
+    :Open AwtAlertFormDialog;
+    :Validate Inputs & Save PreparedStatement UPDATE;
 else if (Delete Alert)
-    :Show Confirmation Dialog;
+    :Show Confirmation AWT Dialog;
     if (Confirmed?) then (Yes)
         :Execute PreparedStatement DELETE;
-        :Remove Row from Database;
     else (No)
         :Cancel Deletion;
     endif
 else if (Export CSV)
-    :Open JFileChooser;
-    :Write Formatted CSV File;
-    :Insert Audit Log in audit_reports;
+    :Open AWT FileDialog (SAVE);
+    :Write CSV File & Insert audit_reports Entry;
 endif
 
-:Refresh Table & Detail Breakdown Panel;
+:Refresh Alert Inventory & Details;
 
 stop
 @enduml
-
