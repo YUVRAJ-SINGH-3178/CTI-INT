@@ -93,7 +93,7 @@ VehicleCTI_AWT_AP25110090004/
 │   ├── uml_*.puml / uml_*.png        # Class, Use-Case, Sequence, Activity, ER diagrams
 │   └── screenshots/                  # 6 genuine Win32-captured AWT UI screenshots
 ├── Report/                           # CS213_Team6_VehicleCTI_Full_AWT_Report.docx
-└── PPT/                              # CS213_Team6_VehicleCTI_Full_AWT_Presentation.pptx
+└── PPT/                              # Team6_Connected_Vehicle_CTI.pptx
 ```
 
 *(Note: When running locally with the full external raw archives next to `Dataset/` and `Implementation/`, placing `CICIoV2024/`, `VeReMi/`, and `attack-stix-data/` in the root directory enables full 1.4M CAN scan, all 225 `.tgz` extraction, and STIX 2.1 bundle lookup.)*
